@@ -1,0 +1,41 @@
+@import url('https://fonts.googleapis.com/css2?family=Teko:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Oswald:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-teko: "Teko", sans-serif;
+  --font-rajdhani: "Rajdhani", sans-serif;
+  --font-oswald: "Oswald", sans-serif;
+}
+
+body {
+  font-family: var(--font-rajdhani);
+  background-color: #030712; /* deep dark blue */
+  color: #ffffff;
+}
+
+/* Custom scrollbar for the dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #082f49; 
+}
+::-webkit-scrollbar-thumb {
+  background: #06b6d4; 
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #0891b2; 
+}
+
+/* Ice/Diamond pattern for poster background fallback */
+.bg-carbon {
+  background: 
+    linear-gradient(27deg, #001829 5px, transparent 5px) 0 5px,
+    linear-gradient(207deg, #001829 5px, transparent 5px) 10px 0px,
+    linear-gradient(27deg, #001f3f 5px, transparent 5px) 0px 10px,
+    linear-gradient(207deg, #001f3f 5px, transparent 5px) 10px 5px,
+    linear-gradient(90deg, #001122 10px, transparent 10px),
+    linear-gradient(#00162a 25%, #001122 25%, #001122 50%, #001b33 50%, #001b33 75%, #002244 75%, #002244 100%);
+  background-size: 20px 20px;
+}

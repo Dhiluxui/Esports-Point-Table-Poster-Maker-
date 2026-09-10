@@ -1,0 +1,47 @@
+{
+  "entities": {
+    "Tournament": {
+      "title": "Tournament",
+      "description": "A tournament configuration",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "ownerId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "slots": { "type": "number" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["ownerId", "name", "slots", "createdAt", "updatedAt"]
+    },
+    "Phase": {
+      "title": "Phase",
+      "description": "A phase in a tournament",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "tournamentId": { "type": "string", "maxLength": 128 },
+        "phaseNumber": { "type": "number" },
+        "name": { "type": "string", "maxLength": 100 },
+        "groupsCount": { "type": "number" },
+        "matchesPerGroup": { "type": "number" },
+        "qualifiedPerGroup": { "type": "number" },
+        "isFinal": { "type": "boolean" },
+        "championRushEnabled": { "type": "boolean" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["tournamentId", "phaseNumber", "name", "groupsCount", "matchesPerGroup", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/tournaments/{tournamentId}": {
+      "schema": { "$ref": "#/entities/Tournament" },
+      "description": "Store tournament data"
+    },
+    "/tournaments/{tournamentId}/phases/{phaseId}": {
+      "schema": { "$ref": "#/entities/Phase" },
+      "description": "Store phase details for a tournament"
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "Remix MG Points Cul",
+  "description": "Esports point table calculator and tournament standings poster generator",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
