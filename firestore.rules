@@ -9,11 +9,11 @@ service cloud.firestore {
     
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
-    function isSignedIn() { return request.auth != null && request.auth.token.email_verified == true; }
+    function isSignedIn() { return true; }
 
     function isValidTournament(data) {
       return data.keys().hasAll(['ownerId', 'name', 'slots', 'createdAt', 'updatedAt'])
-        && data.ownerId == request.auth.uid
+        && data.ownerId == 'anonymous'
         && data.name is string && data.name.size() <= 100
         && data.slots is number
         && data.createdAt is timestamp
@@ -35,7 +35,7 @@ service cloud.firestore {
     }
 
     match /tournaments/{tournamentId} {
-      allow read: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow read: if isSignedIn() && existing().ownerId == 'anonymous';
       allow create: if isSignedIn() 
         && isValidId(tournamentId) 
         && isValidTournament(incoming()) 
@@ -43,33 +43,33 @@ service cloud.firestore {
         && incoming().updatedAt == request.time;
       allow update: if isSignedIn() 
         && isValidId(tournamentId) 
-        && existing().ownerId == request.auth.uid 
+        && existing().ownerId == 'anonymous' 
         && isValidTournament(incoming()) 
         && incoming().ownerId == existing().ownerId 
         && incoming().createdAt == existing().createdAt 
         && incoming().updatedAt == request.time 
         && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'slots', 'updatedAt']);
-      allow delete: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow delete: if isSignedIn() && existing().ownerId == 'anonymous';
 
       match /phases/{phaseId} {
-        allow read: if isSignedIn() && get(/databases/$(database)/documents/tournaments/$(tournamentId)).data.ownerId == request.auth.uid;
+        allow read: if isSignedIn() && get(/databases/$(database)/documents/tournaments/$(tournamentId)).data.ownerId == 'anonymous';
         allow create: if isSignedIn() 
           && isValidId(tournamentId) 
           && isValidId(phaseId) 
           && isValidPhase(incoming(), tournamentId) 
-          && get(/databases/$(database)/documents/tournaments/$(tournamentId)).data.ownerId == request.auth.uid
+          && get(/databases/$(database)/documents/tournaments/$(tournamentId)).data.ownerId == 'anonymous'
           && incoming().createdAt == request.time 
           && incoming().updatedAt == request.time;
         allow update: if isSignedIn() 
           && isValidId(tournamentId) 
           && isValidId(phaseId) 
-          && get(/databases/$(database)/documents/tournaments/$(tournamentId)).data.ownerId == request.auth.uid
+          && get(/databases/$(database)/documents/tournaments/$(tournamentId)).data.ownerId == 'anonymous'
           && isValidPhase(incoming(), tournamentId)
           && incoming().tournamentId == existing().tournamentId 
           && incoming().createdAt == existing().createdAt 
           && incoming().updatedAt == request.time 
           && incoming().diff(existing()).affectedKeys().hasOnly(['phaseNumber', 'name', 'groupsCount', 'matchesPerGroup', 'qualifiedPerGroup', 'isFinal', 'championRushEnabled', 'updatedAt']);
-        allow delete: if isSignedIn() && get(/databases/$(database)/documents/tournaments/$(tournamentId)).data.ownerId == request.auth.uid;
+        allow delete: if isSignedIn() && get(/databases/$(database)/documents/tournaments/$(tournamentId)).data.ownerId == 'anonymous';
       }
     }
   }

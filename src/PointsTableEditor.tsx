@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import * as htmlToImage from 'html-to-image';
 import { useParams, useNavigate } from 'react-router-dom';
+import { collection, query, getDocs, orderBy } from 'firebase/firestore';
+import { db } from './lib/firebase';
 import { 
   Trophy, 
   Download, 
@@ -22,6 +24,7 @@ import {
   ArrowLeft,
   Flame
 } from 'lucide-react';
+import GoogleFormsImport from './components/GoogleFormsImport';
 import { TeamScore, Branding } from './types';
 
 const PLACEMENT_POINTS: Record<number, number> = {
@@ -44,9 +47,18 @@ const DEFAULT_TEAMS: TeamScore[] = [
   { id: '12', name: 'TEAM 12', matchesPlayed: 1, booyahs: 0, placementPoints: 0, killPoints: 0, totalPoints: 0 },
 ];
 
+interface Phase {
+  id: string;
+  name: string;
+  isFinal: boolean;
+  championRushEnabled: boolean;
+  qualifiedPerGroup: number;
+}
+
 export default function PointsTableEditor() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [phases, setPhases] = useState<Phase[]>([]);
   const [teams, setTeams] = useState<TeamScore[]>(DEFAULT_TEAMS);
   const [isManagerOpen, setIsManagerOpen] = useState(false);
   const [mobileTab, setMobileTab] = useState<'editor' | 'preview'>('editor');
@@ -85,6 +97,24 @@ export default function PointsTableEditor() {
   const posterRef = useRef<HTMLDivElement>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const [previewScale, setPreviewScale] = useState(1);
+
+  useEffect(() => {
+    if (!id) return;
+    const fetchPhases = async () => {
+      try {
+        const q = query(collection(db, `tournaments/${id}/phases`), orderBy('phaseNumber', 'asc'));
+        const querySnapshot = await getDocs(q);
+        const data: Phase[] = [];
+        querySnapshot.forEach((doc) => {
+          data.push({ id: doc.id, ...doc.data() } as Phase);
+        });
+        setPhases(data);
+      } catch (error) {
+        console.error("Error fetching phases: ", error);
+      }
+    };
+    fetchPhases();
+  }, [id]);
 
   useEffect(() => {
     const updateScale = () => {
@@ -413,6 +443,41 @@ export default function PointsTableEditor() {
             
             <div className="space-y-6">
               
+              
+              {/* --- Section: Theme & Colors --- */}
+              <div className="bg-[#050b1a] rounded-lg border border-cyan-900/50 overflow-hidden shadow-sm">
+                <div className="bg-cyan-900/30 px-4 py-2 border-b border-cyan-900/50">
+                  <h3 className="text-[11px] font-bold text-cyan-400 uppercase tracking-widest flex items-center gap-2">
+                    <Settings className="w-3.5 h-3.5" /> Theme & Colors
+                  </h3>
+                </div>
+                <div className="p-4 space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-cyan-400/70 uppercase tracking-widest mb-1.5">Primary Color</label>
+                      <div className="flex gap-2 items-center bg-[#0a142f] border border-cyan-500/20 rounded p-1">
+                        <input type="color" value={branding.theme?.primaryColor || '#0055ff'} onChange={e => setBranding(p => ({...p, theme: {...p.theme, primaryColor: e.target.value}}))} className="w-6 h-6 rounded cursor-pointer bg-transparent border-0 p-0" />
+                        <input type="text" value={branding.theme?.primaryColor || '#0055ff'} onChange={e => setBranding(p => ({...p, theme: {...p.theme, primaryColor: e.target.value}}))} className="w-full bg-transparent text-xs text-cyan-50 focus:outline-none uppercase" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-cyan-400/70 uppercase tracking-widest mb-1.5">Accent Color</label>
+                      <div className="flex gap-2 items-center bg-[#0a142f] border border-cyan-500/20 rounded p-1">
+                        <input type="color" value={branding.theme?.accentColor || '#00ccff'} onChange={e => setBranding(p => ({...p, theme: {...p.theme, accentColor: e.target.value}}))} className="w-6 h-6 rounded cursor-pointer bg-transparent border-0 p-0" />
+                        <input type="text" value={branding.theme?.accentColor || '#00ccff'} onChange={e => setBranding(p => ({...p, theme: {...p.theme, accentColor: e.target.value}}))} className="w-full bg-transparent text-xs text-cyan-50 focus:outline-none uppercase" />
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                      <label className="block text-[10px] font-semibold text-cyan-400/70 uppercase tracking-widest mb-1.5">Background Accent</label>
+                      <div className="flex gap-2 items-center bg-[#0a142f] border border-cyan-500/20 rounded p-1">
+                        <input type="color" value={branding.theme?.textColor || '#0f1b3d'} onChange={e => setBranding(p => ({...p, theme: {...p.theme, textColor: e.target.value}}))} className="w-6 h-6 rounded cursor-pointer bg-transparent border-0 p-0" />
+                        <input type="text" value={branding.theme?.textColor || '#0f1b3d'} onChange={e => setBranding(p => ({...p, theme: {...p.theme, textColor: e.target.value}}))} className="w-full bg-transparent text-xs text-cyan-50 focus:outline-none uppercase" />
+                      </div>
+                  </div>
+                </div>
+              </div>
+
               {/* --- Section: Graphics & Logos --- */}
               <div className="bg-[#050b1a] rounded-lg border border-cyan-900/50 overflow-hidden shadow-sm">
                 <div className="bg-cyan-900/30 px-4 py-2 border-b border-cyan-900/50">
@@ -549,12 +614,38 @@ export default function PointsTableEditor() {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-[10px] font-semibold text-cyan-400/70 uppercase tracking-widest mb-1.5">Stage name</label>
-                      <select value={branding.stageName || ''} onChange={e=>setBranding(p=>({...p, stageName: e.target.value}))} className="w-full bg-[#0a142f] border border-cyan-500/20 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-cyan-400 text-cyan-50 transition-colors">
+                      <select 
+                        value={branding.stageName || ''} 
+                        onChange={e => {
+                          const phaseName = e.target.value;
+                          const selectedPhase = phases.find(p => p.name === phaseName);
+                          if (selectedPhase) {
+                            setBranding(p => ({
+                              ...p, 
+                              stageName: phaseName,
+                              championRushEnabled: selectedPhase.championRushEnabled,
+                              qualificationThreshold: selectedPhase.qualifiedPerGroup > 0 ? selectedPhase.qualifiedPerGroup : p.qualificationThreshold,
+                              showQualification: !selectedPhase.isFinal
+                            }));
+                          } else {
+                            setBranding(p => ({...p, stageName: phaseName}));
+                          }
+                        }} 
+                        className="w-full bg-[#0a142f] border border-cyan-500/20 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-cyan-400 text-cyan-50 transition-colors"
+                      >
                         <option value="">None</option>
-                        <option value="QUALIFIER">QUALIFIER</option>
-                        <option value="SEMI-FINAL">SEMI-FINAL</option>
-                        <option value="FINAL">FINAL</option>
-                        <option value="GRAND-FINAL">GRAND-FINAL</option>
+                        {phases.length > 0 ? (
+                          phases.map(p => (
+                            <option key={p.id} value={p.name}>{p.name}</option>
+                          ))
+                        ) : (
+                          <>
+                            <option value="QUALIFIER">QUALIFIER</option>
+                            <option value="SEMI-FINAL">SEMI-FINAL</option>
+                            <option value="FINAL">FINAL</option>
+                            <option value="GRAND-FINAL">GRAND-FINAL</option>
+                          </>
+                        )}
                       </select>
                     </div>
                     <div>
@@ -570,6 +661,47 @@ export default function PointsTableEditor() {
                     <label className="block text-[10px] font-semibold text-cyan-400/70 uppercase tracking-widest mb-1.5">Footer Text</label>
                     <input type="text" value={branding.footerText} onChange={e=>setBranding(p=>({...p, footerText: e.target.value}))} className="w-full bg-[#0a142f] border border-cyan-500/20 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-cyan-400 text-cyan-50 transition-colors" />
                   </div>
+                </div>
+              </div>
+
+              {/* --- Section: Tournament Phase / Format --- */}
+              <div className="bg-[#050b1a] rounded-lg border border-cyan-900/50 overflow-hidden shadow-sm">
+                <div className="bg-cyan-900/30 px-4 py-2 border-b border-cyan-900/50">
+                  <h3 className="text-[11px] font-bold text-cyan-400 uppercase tracking-widest flex items-center gap-2">
+                    <Target className="w-3.5 h-3.5" /> Tournament Phase / Format
+                  </h3>
+                </div>
+                <div className="p-4 space-y-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-[11px] font-semibold text-cyan-100 uppercase tracking-widest">Show Phase Strip</label>
+                    <div className="relative inline-block w-10 mr-2 align-middle select-none">
+                      <input type="checkbox" checked={branding.phaseDetails?.enabled || false} onChange={e=>setBranding(p=>({...p, phaseDetails: { ...(p.phaseDetails || {}), enabled: e.target.checked }}))} className="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 border-[#0a142f] appearance-none cursor-pointer transition-transform duration-200 ease-in-out checked:translate-x-5 checked:border-cyan-500" style={{ top: '2px', left: '2px' }} />
+                      <label className={`toggle-label block overflow-hidden h-6 rounded-full cursor-pointer transition-colors duration-200 ease-in-out ${branding.phaseDetails?.enabled ? 'bg-cyan-500' : 'bg-[#0a142f] border border-cyan-500/20'}`}></label>
+                    </div>
+                  </div>
+                  
+                  {branding.phaseDetails?.enabled && (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-semibold text-cyan-400/70 uppercase tracking-widest mb-1.5">No. of Groups</label>
+                          <input type="text" placeholder="e.g. 4" value={branding.phaseDetails?.groupCount || ''} onChange={e=>setBranding(p=>({...p, phaseDetails: { ...(p.phaseDetails || {enabled: true}), groupCount: e.target.value }}))} className="w-full bg-[#0a142f] border border-cyan-500/20 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-cyan-400 text-cyan-50 transition-colors" />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-semibold text-cyan-400/70 uppercase tracking-widest mb-1.5">No. of Matches</label>
+                          <input type="text" placeholder="e.g. 6 or CHAMPION RUSH" value={branding.phaseDetails?.matchCount || ''} onChange={e=>setBranding(p=>({...p, phaseDetails: { ...(p.phaseDetails || {enabled: true}), matchCount: e.target.value }}))} className="w-full bg-[#0a142f] border border-cyan-500/20 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-cyan-400 text-cyan-50 transition-colors" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-semibold text-cyan-400/70 uppercase tracking-widest mb-1.5">Qualification Details</label>
+                        <input type="text" placeholder="e.g. TOP 6 QUALIFIED directly FOR LAN PHASE" value={branding.phaseDetails?.qualificationInfo || ''} onChange={e=>setBranding(p=>({...p, phaseDetails: { ...(p.phaseDetails || {enabled: true}), qualificationInfo: e.target.value }}))} className="w-full bg-[#0a142f] border border-cyan-500/20 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-cyan-400 text-cyan-50 transition-colors" />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-semibold text-cyan-400/70 uppercase tracking-widest mb-1.5">Extra Info (e.g. Next Stage)</label>
+                        <input type="text" placeholder="e.g. Next Stage: FINAL" value={branding.phaseDetails?.extraInfo || ''} onChange={e=>setBranding(p=>({...p, phaseDetails: { ...(p.phaseDetails || {enabled: true}), extraInfo: e.target.value }}))} className="w-full bg-[#0a142f] border border-cyan-500/20 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-cyan-400 text-cyan-50 transition-colors" />
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -650,13 +782,16 @@ export default function PointsTableEditor() {
                 style={{
                   backgroundImage: branding.backgroundImage ? `url("${branding.backgroundImage}")` : '',
                   backgroundSize: branding.backgroundImage ? '100% 100%' : '',
-                  backgroundPosition: 'center'
-                }}
+                  backgroundPosition: 'center',
+                  '--theme-primary': branding.theme?.primaryColor || '#0055ff',
+                  '--theme-accent': branding.theme?.accentColor || '#00ccff',
+                  '--theme-bg-accent': branding.theme?.textColor || '#0f1b3d',
+                } as React.CSSProperties}
               >
               
               {/* Background Overlay (if no user BG) */}
               {!branding.backgroundImage && (
-                <div className="absolute inset-0 bg-gradient-to-br from-[#00ccff]/20 via-[#001133] to-[#000511] pointer-events-none z-0" />
+                <div className="absolute inset-0 bg-gradient-to-br from-[var(--theme-accent)]/20 via-[color-mix(in_srgb,var(--theme-bg-accent)_80%,#000)] to-[color-mix(in_srgb,var(--theme-bg-accent)_95%,#000)] pointer-events-none z-0" />
               )}
               
               {/* Top Corner Logos */}
@@ -677,15 +812,15 @@ export default function PointsTableEditor() {
                 {/* 1. Tagline */}
                 {branding.tagline ? (
                   <div className="flex justify-center items-center mb-6 mt-2 w-full px-12">
-                    <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-[#0055ff]/50"></div>
-                    <div className="bg-gradient-to-b from-[#0f1b3d] to-[#050b1a] border border-[#00ccff]/30 rounded-sm px-8 py-1.5 shadow-[0_0_20px_rgba(0,204,255,0.2),inset_0_0_10px_rgba(0,204,255,0.1)] relative overflow-hidden flex items-center gap-3">
-                      <div className="w-1.5 h-1.5 bg-[#00ccff] rotate-45 shadow-[0_0_8px_#00ccff]"></div>
-                      <span className="font-rajdhani text-[17px] font-bold tracking-[0.25em] text-white drop-shadow-[0_0_8px_rgba(0,204,255,0.8)] relative z-10 uppercase">
+                    <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-[var(--theme-primary)]/50"></div>
+                    <div className="bg-gradient-to-b from-[var(--theme-bg-accent)] to-[#050b1a] border border-[var(--theme-accent)]/30 rounded-sm px-8 py-1.5 shadow-[0_0_20px_color-mix(in_srgb,var(--theme-accent)_20%,transparent),inset_0_0_10px_color-mix(in_srgb,var(--theme-accent)_10%,transparent)] relative overflow-hidden flex items-center gap-3">
+                      <div className="w-1.5 h-1.5 bg-[var(--theme-accent)] rotate-45 shadow-[0_0_8px_var(--theme-accent)]"></div>
+                      <span className="font-rajdhani text-[17px] font-bold tracking-[0.25em] text-white drop-shadow-[0_0_8px_color-mix(in_srgb,var(--theme-accent)_80%,transparent)] relative z-10 uppercase">
                         {branding.tagline}
                       </span>
-                      <div className="w-1.5 h-1.5 bg-[#00ccff] rotate-45 shadow-[0_0_8px_#00ccff]"></div>
+                      <div className="w-1.5 h-1.5 bg-[var(--theme-accent)] rotate-45 shadow-[0_0_8px_var(--theme-accent)]"></div>
                     </div>
-                    <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-[#0055ff]/50"></div>
+                    <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-[var(--theme-primary)]/50"></div>
                   </div>
                 ) : (
                   <div className="h-[35px] mb-6 mt-2"></div>
@@ -698,17 +833,17 @@ export default function PointsTableEditor() {
                        {branding.tournamentLogo ? (
                          <img src={branding.tournamentLogo} className="h-[95%] w-[95%] object-contain drop-shadow-[0_15px_25px_rgba(0,0,0,0.5)] relative z-20 scale-125" alt="Tournament Logo" />
                        ) : (
-                         <div className="w-[130px] h-[155px] bg-gradient-to-b from-[#0f1b3d]/90 to-[#040b1c] rounded-b-[50px] rounded-t-[16px] border-[3px] border-[#0055ff]/50 border-t-[#00ccff]/30 flex items-center justify-center shadow-[0_15px_30px_rgba(0,0,0,0.6),inset_0_4px_15px_rgba(0,204,255,0.2)] relative overflow-hidden z-20">
-                            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#00ccff]/20 via-transparent to-transparent"></div>
-                            <Shield className="w-16 h-16 text-[#00ccff] relative z-10 drop-shadow-[0_0_15px_rgba(0,204,255,0.5)]" />
+                         <div className="w-[130px] h-[155px] bg-gradient-to-b from-[var(--theme-bg-accent)]/90 to-[#040b1c] rounded-b-[50px] rounded-t-[16px] border-[3px] border-[var(--theme-primary)]/50 border-t-[var(--theme-accent)]/30 flex items-center justify-center shadow-[0_15px_30px_rgba(0,0,0,0.6),inset_0_4px_15px_color-mix(in_srgb,var(--theme-accent)_20%,transparent)] relative overflow-hidden z-20">
+                            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[var(--theme-accent)]/20 via-transparent to-transparent"></div>
+                            <Shield className="w-16 h-16 text-[var(--theme-accent)] relative z-10 drop-shadow-[0_0_15px_color-mix(in_srgb,var(--theme-accent)_50%,transparent)]" />
                          </div>
                        )}
                    </div>
 
                     {/* Divider & 70% Width for Title */}
-                   <div className="w-[70%] flex flex-col justify-center border-l-[4px] border-[#00ccff] pl-6 ml-8 relative before:absolute before:inset-y-0 before:-left-[4px] before:w-[4px] before:shadow-[0_0_15px_rgba(0,204,255,0.9)]">
+                   <div className="w-[70%] flex flex-col justify-center border-l-[4px] border-[var(--theme-accent)] pl-6 ml-8 relative before:absolute before:inset-y-0 before:-left-[4px] before:w-[4px] before:shadow-[0_0_15px_color-mix(in_srgb,var(--theme-accent)_90%,transparent)]">
                      {branding.organizationName && (
-                        <div className="text-[15px] font-rajdhani font-bold text-[#00ccff] uppercase tracking-[0.35em] mb-1 drop-shadow-[0_0_8px_rgba(0,204,255,0.5)]">
+                        <div className="text-[15px] font-rajdhani font-bold text-[var(--theme-accent)] uppercase tracking-[0.35em] mb-1 drop-shadow-[0_0_8px_color-mix(in_srgb,var(--theme-accent)_50%,transparent)]">
                           {branding.organizationName}
                         </div>
                      )}
@@ -719,7 +854,7 @@ export default function PointsTableEditor() {
                             className={`block leading-[0.9] ${
                               i === 0 
                                 ? 'text-[65px] font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-[#cbd5e1] drop-shadow-[0_4px_12px_rgba(255,255,255,0.3)] tracking-wide' 
-                                : 'text-[72px] font-black text-transparent bg-clip-text bg-gradient-to-b from-[#00ccff] to-[#0055ff] drop-shadow-[0_4px_15px_rgba(0,136,255,0.6)] tracking-wider -mt-2'
+                                : 'text-[72px] font-black text-transparent bg-clip-text bg-gradient-to-b from-[var(--theme-accent)] to-[var(--theme-primary)] drop-shadow-[0_4px_15px_color-mix(in_srgb,var(--theme-primary)_60%,transparent)] tracking-wider -mt-2'
                             }`}
                             style={{ WebkitTextStroke: i === 0 ? '1px rgba(255,255,255,0.2)' : '2px rgba(0,30,150,0.3)' }}
                           >
@@ -729,7 +864,7 @@ export default function PointsTableEditor() {
                       </h1>
                       <div className="flex flex-wrap items-stretch self-start gap-3 relative mt-1">
                         {branding.stageName && (
-                          <div className="text-white font-oswald font-black text-[20px] tracking-wider flex items-center bg-[#1e88e5] px-6 py-1 skew-x-[-12deg] shadow-[5px_0_15px_rgba(0,0,0,0.3)] z-10 border border-[#00ccff]/30">
+                          <div className="text-white font-oswald font-black text-[20px] tracking-wider flex items-center bg-[var(--theme-primary)] px-6 py-1 skew-x-[-12deg] shadow-[5px_0_15px_rgba(0,0,0,0.3)] z-10 border border-[var(--theme-accent)]/30">
                             <span className="relative z-10 drop-shadow-md skew-x-[12deg]">{branding.stageName}</span>
                           </div>
                         )}
@@ -738,7 +873,7 @@ export default function PointsTableEditor() {
                              {branding.subtitle?.split('|').map((part, i, arr) => (
                                 <React.Fragment key={i}>
                                   <span className="relative z-10 drop-shadow-sm skew-x-[12deg]">{part.trim()}</span>
-                                  {i < arr.length - 1 && <span className="mx-3 text-[#00ccff]/60 font-black relative z-10 skew-x-[12deg]">|</span>}
+                                  {i < arr.length - 1 && <span className="mx-3 text-[var(--theme-accent)]/60 font-black relative z-10 skew-x-[12deg]">|</span>}
                                 </React.Fragment>
                              ))}
                           </div>
@@ -747,10 +882,42 @@ export default function PointsTableEditor() {
                    </div>
                 </div>
 
+                {/* --- Phase Details Strip --- */}
+                {branding.phaseDetails?.enabled && (
+                  <div className="relative z-20 w-[86%] mx-auto flex flex-wrap items-center justify-between bg-black/70 backdrop-blur-md border-l-4 border-l-[var(--theme-accent)] border-y border-r border-[var(--theme-accent)]/20 text-white font-rajdhani font-bold tracking-widest px-4 py-1.5 mb-2 rounded-r-sm shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
+                    <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-[14px]">
+                      {branding.phaseDetails.groupCount && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-[var(--theme-accent)] text-[12px]">NO OF GROUP :</span>
+                          <span className="text-[16px] drop-shadow-md">{branding.phaseDetails.groupCount}</span>
+                        </div>
+                      )}
+                      {branding.phaseDetails.matchCount && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-[var(--theme-accent)] text-[12px]">MATCHES :</span>
+                          <span className="text-[16px] drop-shadow-md text-yellow-400">{branding.phaseDetails.matchCount}</span>
+                        </div>
+                      )}
+                      {branding.phaseDetails.extraInfo && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-[var(--theme-accent)] text-[12px]">NEXT :</span>
+                          <span className="text-[15px] text-white/90">{branding.phaseDetails.extraInfo}</span>
+                        </div>
+                      )}
+                    </div>
+                    {branding.phaseDetails.qualificationInfo && (
+                      <div className="text-[13px] text-emerald-400 bg-emerald-500/10 px-3 py-0.5 rounded-sm border border-emerald-500/30 flex items-center gap-1.5 shadow-[0_0_10px_rgba(16,185,129,0.15)]">
+                         <Target className="w-3.5 h-3.5" />
+                         {branding.phaseDetails.qualificationInfo}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* 3. Main Data Table */}
                 <div className="relative z-20 w-[86%] mx-auto flex flex-col bg-transparent">
                              {/* Table Header */}
-                  <div className="h-[38px] bg-[#0055ff] text-white flex items-center px-4 rounded-t-sm shadow-[0_5px_15px_rgba(0,0,0,0.4)] mb-[3px] border-b-[3px] border-[#00ccff] relative overflow-hidden">
+                  <div className="h-[38px] bg-[var(--theme-primary)] text-white flex items-center px-4 rounded-t-sm shadow-[0_5px_15px_rgba(0,0,0,0.4)] mb-[3px] border-b-[3px] border-[var(--theme-accent)] relative overflow-hidden">
                     <div className="absolute top-0 right-0 h-full w-[30%] bg-gradient-to-l from-white/10 to-transparent pointer-events-none"></div>
                     <div className="flex-1 flex px-2 font-rajdhani font-bold text-[14px] tracking-wider uppercase items-center relative z-10">
                        {hasStatusColumn && <div className="w-[5%] shrink-0"></div>} {/* Q/E */}
@@ -759,7 +926,7 @@ export default function PointsTableEditor() {
                        
                        {branding.showMatches !== false && <div className="w-[8%] shrink-0 text-center drop-shadow-md text-[13px] text-white/90">Mtchs</div>}
                        <div className="w-[8%] shrink-0 text-center drop-shadow-md text-[13px] text-white/90">Booyah</div>
-                       <div className="w-[14%] shrink-0 text-center drop-shadow-md text-[13px] text-[#00ccff]">Place Pts</div>
+                       <div className="w-[14%] shrink-0 text-center drop-shadow-md text-[13px] text-[var(--theme-accent)]">Place Pts</div>
                        <div className="w-[8%] shrink-0 text-center drop-shadow-md text-[13px] text-white">Elims</div>
                        <div className="w-[12%] shrink-0 text-center drop-shadow-md text-[14px]">Total</div>
                     </div>
@@ -774,19 +941,19 @@ export default function PointsTableEditor() {
                         
                         let bgColor = '';
                         if (index === 0) {
-                          bgColor = isChampionRush ? 'bg-gradient-to-r from-[#ff8800] via-[#cc5500] to-[#0a142f] shadow-[0_10px_25px_rgba(255,136,0,0.4)] z-20 relative [clip-path:polygon(0_0,100%_0,97%_100%,0_100%)] border-l-[3px] border-l-white' : 'bg-gradient-to-r from-[#ffffff] via-[#e6f7ff] to-[#cceeff] shadow-[0_10px_25px_rgba(0,119,255,0.4)] z-20 relative [clip-path:polygon(0_0,100%_0,97%_100%,0_100%)] border-l-[3px] border-l-[#00ccff]';
+                          bgColor = isChampionRush ? 'bg-gradient-to-r from-[#ff8800] via-[#cc5500] to-[#0a142f] shadow-[0_10px_25px_rgba(255,136,0,0.4)] z-20 relative [clip-path:polygon(0_0,100%_0,97%_100%,0_100%)] border-l-[3px] border-l-white' : 'bg-gradient-to-r from-[#ffffff] via-[color-mix(in_srgb,var(--theme-accent)_15%,#fff)] to-[color-mix(in_srgb,var(--theme-accent)_30%,#fff)] shadow-[0_10px_25px_color-mix(in_srgb,var(--theme-primary)_40%,transparent)] z-20 relative [clip-path:polygon(0_0,100%_0,97%_100%,0_100%)] border-l-[3px] border-l-[var(--theme-accent)]';
                         } else if (index === 1) {
-                          bgColor = isChampionRush ? 'bg-gradient-to-r from-[#4a2800] via-[#112d59] to-[#0d2145] shadow-[inset_4px_0_0_0_rgba(255,136,0,0.6),0_4px_15px_rgba(0,0,0,0.4)] z-10 relative' : 'bg-gradient-to-r from-[#00ccff] via-[#0099ff] to-[#0066cc] shadow-[0_4px_15px_rgba(0,204,255,0.3)] z-10 relative border-l-[3px] border-l-white/70';
+                          bgColor = isChampionRush ? 'bg-gradient-to-r from-[#4a2800] via-[#112d59] to-[#0d2145] shadow-[inset_4px_0_0_0_rgba(255,136,0,0.6),0_4px_15px_rgba(0,0,0,0.4)] z-10 relative' : 'bg-gradient-to-r from-[var(--theme-accent)] via-[color-mix(in_srgb,var(--theme-accent)_80%,var(--theme-primary))] to-[var(--theme-primary)] shadow-[0_4px_15px_color-mix(in_srgb,var(--theme-accent)_30%,transparent)] z-10 relative border-l-[3px] border-l-white/70';
                         } else if (index === 2) {
-                          bgColor = isChampionRush ? 'bg-gradient-to-r from-[#4a2800] via-[#0a1e42] to-[#081836] shadow-[inset_4px_0_0_0_rgba(255,136,0,0.6),0_4px_15px_rgba(0,0,0,0.3)] z-10 relative' : 'bg-gradient-to-r from-[#0088ff] via-[#0066cc] to-[#0044aa] shadow-[0_4px_15px_rgba(0,119,204,0.3)] z-10 relative border-l-[3px] border-l-white/50';
+                          bgColor = isChampionRush ? 'bg-gradient-to-r from-[#4a2800] via-[#0a1e42] to-[#081836] shadow-[inset_4px_0_0_0_rgba(255,136,0,0.6),0_4px_15px_rgba(0,0,0,0.3)] z-10 relative' : 'bg-gradient-to-r from-[var(--theme-primary)] via-[var(--theme-primary)] to-[color-mix(in_srgb,var(--theme-primary)_70%,#000)] shadow-[0_4px_15px_rgba(0,119,204,0.3)] z-10 relative border-l-[3px] border-l-white/50';
                         } else if (isChampionRush) {
-                          bgColor = 'bg-gradient-to-r from-[#4a2800] via-[#0f1b3d] to-[#0a142f] shadow-[inset_4px_0_0_0_rgba(255,136,0,0.6)] z-10 relative';
+                          bgColor = 'bg-gradient-to-r from-[#4a2800] via-[var(--theme-bg-accent)] to-[#0a142f] shadow-[inset_4px_0_0_0_rgba(255,136,0,0.6)] z-10 relative';
                         } else {
-                          bgColor = index % 2 === 0 ? 'bg-[#0b1633] border-l-[2px] border-[#00ccff]/30' : 'bg-[#060d21] border-l-[2px] border-transparent';
+                          bgColor = index % 2 === 0 ? 'bg-[#0b1633] border-l-[2px] border-[var(--theme-accent)]/30' : 'bg-[#060d21] border-l-[2px] border-transparent';
                         }
                         
                         const textColor = index === 0 && !isChampionRush ? 'text-[#0a142f]' : 'text-white';
-                        const secTextColor = index === 0 && !isChampionRush ? 'text-[#0055ff]' : 'text-[#00ccff]';
+                        const secTextColor = index === 0 && !isChampionRush ? 'text-[var(--theme-primary)]' : 'text-[var(--theme-accent)]';
                         
                         const rowClass = `h-[40px] flex items-center px-4 ${bgColor} ${textColor} rounded-sm shadow-sm relative overflow-hidden transition-all duration-300`;
 
@@ -838,7 +1005,7 @@ export default function PointsTableEditor() {
                               <div style={{ width: `${100 - 8 - 8 - 14 - 8 - 12 - (hasStatusColumn ? 5 : 0) - (branding.showMatches !== false ? 8 : 0)}%` }} className={`${branding.showTeamLogos !== false ? 'pl-1' : 'pl-4'} shrink-0 flex items-center gap-2 font-oswald text-[20px] ${isRank1 ? 'font-bold' : 'font-medium'} tracking-wide uppercase truncate drop-shadow-sm overflow-visible`}>
                                 {(branding.showTeamLogos !== false) && (
                                   <label className={`w-8 h-8 flex-shrink-0 flex items-center justify-center rounded overflow-hidden cursor-pointer hover:ring-2 hover:ring-cyan-500 transition-all ${isRank1 ? 'bg-black/10' : 'bg-black/20'}`}>
-                                     {team.logo ? <img src={team.logo} className="w-full h-full object-contain" /> : <Shield className={`w-5 h-5 ${isRank1 ? 'text-white/80' : 'text-[#00ccff]/50'}`} />}
+                                     {team.logo ? <img src={team.logo} className="w-full h-full object-contain" /> : <Shield className={`w-5 h-5 ${isRank1 ? 'text-white/80' : 'text-[var(--theme-accent)]/50'}`} />}
                                      <input 
                                        type="file" 
                                        className="hidden" 
@@ -866,10 +1033,10 @@ export default function PointsTableEditor() {
                               </div>
 
                                {/* Stats */}
-                               {branding.showMatches !== false && <div className={`w-[8%] shrink-0 text-center font-rajdhani text-[20px] font-semibold ${isRank1 ? 'text-[#0055ff]' : 'text-white/80'}`}>{team.matchesPlayed}</div>}
-                              <div className={`w-[8%] shrink-0 text-center font-rajdhani text-[20px] font-semibold ${isRank1 ? 'text-[#0055ff]' : 'text-white/90'}`}>{team.booyahs}</div>
-                              <div className={`w-[14%] shrink-0 text-center font-rajdhani text-[19px] font-bold ${isRank1 ? 'text-[#0a142f]' : index < 3 ? 'text-white drop-shadow-sm' : 'text-[#00ccff]'}`}>{team.placementPoints}</div>
-                              <div className={`w-[8%] shrink-0 text-center font-rajdhani text-[19px] font-bold ${isRank1 ? 'text-[#0055ff]' : 'text-white'}`}>{team.killPoints}</div>
+                               {branding.showMatches !== false && <div className={`w-[8%] shrink-0 text-center font-rajdhani text-[20px] font-semibold ${isRank1 ? 'text-[var(--theme-primary)]' : 'text-white/80'}`}>{team.matchesPlayed}</div>}
+                              <div className={`w-[8%] shrink-0 text-center font-rajdhani text-[20px] font-semibold ${isRank1 ? 'text-[var(--theme-primary)]' : 'text-white/90'}`}>{team.booyahs}</div>
+                              <div className={`w-[14%] shrink-0 text-center font-rajdhani text-[19px] font-bold ${isRank1 ? 'text-[#0a142f]' : index < 3 ? 'text-white drop-shadow-sm' : 'text-[var(--theme-accent)]'}`}>{team.placementPoints}</div>
+                              <div className={`w-[8%] shrink-0 text-center font-rajdhani text-[19px] font-bold ${isRank1 ? 'text-[var(--theme-primary)]' : 'text-white'}`}>{team.killPoints}</div>
                               <div className={`w-[12%] shrink-0 text-center font-rajdhani text-[24px] font-black pb-0.5 ${isRank1 ? 'drop-shadow-md text-[#0a142f]' : 'drop-shadow-md text-white'}`}>
                                 {team.totalPoints}
                               </div>
@@ -902,7 +1069,7 @@ export default function PointsTableEditor() {
                     >
                       {/* YouTube */}
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-[12px] bg-gradient-to-br from-[#00ccff] to-[#0099ff] flex items-center justify-center shrink-0 shadow-inner">
+                        <div className="w-12 h-12 rounded-[12px] bg-gradient-to-br from-[var(--theme-accent)] to-[color-mix(in_srgb,var(--theme-accent)_80%,var(--theme-primary))] flex items-center justify-center shrink-0 shadow-inner">
                           <svg className="w-6 h-6 text-[#040b1c]" viewBox="0 0 24 24" fill="currentColor"><path d="M21.582,6.186c-0.23-0.86-0.908-1.538-1.768-1.768C18.254,4,12,4,12,4S5.746,4,4.186,4.418 c-0.86,0.23-1.538,0.908-1.768,1.768C2,7.746,2,12,2,12s0,4.254,0.418,5.814c0.23,0.86,0.908,1.538,1.768,1.768 C5.746,20,12,20,12,20s6.254,0,7.814-0.418c0.861-0.23,1.538-0.908,1.768-1.768C22,16.254,22,12,22,12S22,7.746,21.582,6.186z M10,15.464V8.536L16,12L10,15.464z" /></svg>
                         </div>
                         <div className="flex flex-col font-rajdhani">
@@ -913,7 +1080,7 @@ export default function PointsTableEditor() {
 
                       {/* Instagram */}
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-[12px] bg-gradient-to-br from-[#00ccff] to-[#0099ff] flex items-center justify-center shrink-0 shadow-inner">
+                        <div className="w-12 h-12 rounded-[12px] bg-gradient-to-br from-[var(--theme-accent)] to-[color-mix(in_srgb,var(--theme-accent)_80%,var(--theme-primary))] flex items-center justify-center shrink-0 shadow-inner">
                            <svg className="w-6 h-6 text-[#040b1c]" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2.163c3.204,0,3.584,0.012,4.85,0.07c1.366,0.062,2.633,0.342,3.608,1.317c0.975,0.975,1.255,2.242,1.317,3.608 c0.058,1.266,0.07,1.646,0.07,4.85s-0.012,3.584-0.07,4.85c-0.062,1.366-0.342,2.633-1.317,3.608 c-0.975,0.975-2.242,1.255-3.608,1.317c-1.266,0.058-1.646,0.07-4.85,0.07s-3.584-0.012-4.85-0.07 c-1.366-0.062-2.633-0.342-3.608-1.317c-0.975-0.975-1.255-2.242-1.317-3.608c-0.058-1.266-0.07-1.646-0.07-4.85 s0.012-3.584,0.07-4.85c0.062-1.366,0.342-2.633,1.317-3.608c0.975-0.975,2.242-1.255,3.608-1.317 C8.416,2.175,8.796,2.163,12,2.163 M12,0C8.741,0,8.333,0.014,7.053,0.072C5.775,0.13,4.902,0.333,4.14,0.63 c-0.789,0.306-1.459,0.717-2.126,1.384C1.347,2.681,0.935,3.351,0.63,4.14C0.333,4.902,0.13,5.775,0.072,7.053 C0.014,8.333,0,8.741,0,12s0.014,3.667,0.072,4.947c0.058,1.278,0.261,2.151,0.558,2.913c0.306,0.789,0.717,1.459,1.384,2.126 c0.667,0.666,1.336,1.079,2.126,1.384c0.762,0.297,1.635,0.5,2.913,0.558C8.333,23.986,8.741,24,12,24s3.667-0.014,4.947-0.072 c1.278-0.058,2.151-0.261,2.913-0.558c0.789-0.306,1.459-0.717,2.126-1.384c0.666-0.667,1.079-1.336,1.384-2.126 c0.297-0.762,0.5-1.635,0.558-2.913C23.986,15.667,24,15.259,24,12s-0.014-3.667-0.072-4.947c-0.058-1.278-0.261-2.151-0.558-2.913 c-0.306-0.789-0.717-1.459-1.384-2.126C21.319,1.347,20.651,0.935,19.86,0.63c-0.762-0.297-1.635-0.5-2.913-0.558 C15.667,0.014,15.259,0,12,0L12,0z M12,5.838c-3.403,0-6.162,2.759-6.162,6.162c0,3.403,2.759,6.162,6.162,6.162 c3.403,0,6.162-2.759,6.162-6.162C18.162,8.597,15.403,5.838,12,5.838L12,5.838z M12,16.035c-2.228,0-4.035-1.807-4.035-4.035 c0-2.228,1.807-4.035,4.035-4.035c2.228,0,4.035,1.807,4.035,4.035C16.035,14.228,14.228,16.035,12,16.035L12,16.035z M18.406,4.155 c-0.796,0-1.44,0.645-1.44,1.44c0,0.795,0.644,1.439,1.44,1.439c0.795,0,1.439-0.644,1.439-1.439 C19.845,4.8,19.201,4.155,18.406,4.155L18.406,4.155z" /></svg>
                         </div>
                         <div className="flex flex-col font-rajdhani">
@@ -990,6 +1157,12 @@ export default function PointsTableEditor() {
             </div>
             
             <div className="flex-1 overflow-auto p-0">
+               <div className="p-4 md:p-6 border-b border-cyan-500/20">
+                  <GoogleFormsImport 
+                    onImport={(newTeams) => setTeams(prev => [...prev, ...newTeams])} 
+                    existingTeamsCount={teams.length} 
+                  />
+               </div>
                <div className="min-w-[800px] pb-4">
                  {/* Table Header */}
                  <div className="sticky top-0 bg-[#070f22] grid grid-cols-12 gap-2 text-[11px] font-bold text-cyan-400/70 uppercase tracking-widest p-4 border-b border-cyan-500/20 shadow-md z-10 text-center items-center">

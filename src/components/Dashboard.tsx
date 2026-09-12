@@ -55,10 +55,7 @@ export default function Dashboard({ user }: DashboardProps) {
             <p className="text-xs text-cyan-400/70 font-semibold tracking-widest uppercase">{user.displayName || 'Organizer'}</p>
           </div>
         </div>
-        <button onClick={signOut} className="text-cyan-400/60 hover:text-red-400 transition-colors flex items-center gap-2 text-sm font-semibold uppercase tracking-wider">
-          <LogOut className="w-4 h-4" />
-          <span className="hidden md:inline">Sign Out</span>
-        </button>
+        
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-12">

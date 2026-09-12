@@ -4,21 +4,41 @@ import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+export const db = getFirestore(app, "ai-studio-remixmgpointscul-f8ad121d-4ed2-4ee5-9024-f6e06a371c8a");
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
+googleProvider.addScope('https://www.googleapis.com/auth/forms.body.readonly');
+googleProvider.addScope('https://www.googleapis.com/auth/forms.responses.readonly');
+
+let isSigningIn = false;
+let cachedAccessToken: string | null = null;
 
 export const signInWithGoogle = async () => {
+  if (isSigningIn) return null;
   try {
-    await signInWithPopup(auth, googleProvider);
-  } catch (error) {
+    isSigningIn = true;
+    const result = await signInWithPopup(auth, googleProvider);
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    if (credential?.accessToken) {
+      cachedAccessToken = credential.accessToken;
+    }
+    return result.user;
+  } catch (error: any) {
     console.error("Google Sign-In Error", error);
+    throw error;
+  } finally {
+    isSigningIn = false;
   }
+};
+
+export const getAccessToken = async (): Promise<string | null> => {
+  return cachedAccessToken;
 };
 
 export const signOut = async () => {
   try {
     await firebaseSignOut(auth);
+    cachedAccessToken = null;
   } catch (error) {
     console.error("Sign Out Error", error);
   }

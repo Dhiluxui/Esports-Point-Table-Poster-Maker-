@@ -33,5 +33,17 @@ export interface Branding {
   stageName?: string;
   championRushEnabled?: boolean;
   championRushThreshold?: number;
+  phaseDetails?: {
+    enabled: boolean;
+    groupCount?: string;
+    matchCount?: string;
+    qualificationInfo?: string;
+    extraInfo?: string;
+  };
   sponsorName?: string;
+  theme?: {
+    primaryColor?: string;
+    accentColor?: string;
+    textColor?: string;
+  };
 }
