@@ -1,15 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
-import { auth, signInWithGoogle, signOut, db } from './lib/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
-import { LogOut, Trophy, Plus, ChevronRight, X } from 'lucide-react';
-import PointsTableEditor from './PointsTableEditor';
+import re
 
-// Components
-import Dashboard from './components/Dashboard';
+with open('src/App.tsx', 'r') as f:
+    content = f.read()
 
-import { signInAnonymously } from 'firebase/auth';
+new_app_content = """import { signInAnonymously } from 'firebase/auth';
 
 function AppContent() {
   const [user, setUser] = useState<User | null>(null);
@@ -47,12 +41,9 @@ function AppContent() {
       <Route path="/tournament/:id" element={<PointsTableEditor />} />
     </Routes>
   );
-}
+}"""
 
-export default function App() {
-  return (
-    <BrowserRouter>
-      <AppContent />
-    </BrowserRouter>
-  );
-}
+content = re.sub(r'function AppContent\(\) \{.*?(?=export default function App\(\) \{)', new_app_content + '\n\n', content, flags=re.DOTALL)
+
+with open('src/App.tsx', 'w') as f:
+    f.write(content)

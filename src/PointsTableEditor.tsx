@@ -119,16 +119,19 @@ export default function PointsTableEditor() {
   useEffect(() => {
     const updateScale = () => {
       if (previewContainerRef.current) {
-        // Calculate the scale needed to fit 800px or full container width
-        // p-2 on mobile means 16px of horizontal padding to remove from available width
-        // Also p-4 on lg means 32px
-        const padding = window.innerWidth >= 1024 ? 32 : 16;
+        const padding = window.innerWidth >= 1024 ? 64 : 32;
         const containerWidth = previewContainerRef.current.clientWidth - padding;
+        const containerHeight = previewContainerRef.current.clientHeight - padding;
         
-        if (containerWidth < 800 && containerWidth > 0) {
-          setPreviewScale(containerWidth / 800);
+        const scaleByWidth = containerWidth / 800;
+        const scaleByHeight = containerHeight / 1100;
+        
+        if (window.innerWidth >= 1024) {
+           // Desktop: try to fit entire poster in viewport
+           setPreviewScale(Math.min(scaleByWidth, scaleByHeight, 1));
         } else {
-          setPreviewScale(1);
+           // Mobile: just fit horizontally, let it scroll vertically
+           setPreviewScale(scaleByWidth > 0 ? Math.min(scaleByWidth, 1) : 1);
         }
       }
     };
@@ -285,7 +288,7 @@ export default function PointsTableEditor() {
         <div className="flex items-center gap-3 w-full md:w-auto">
           <button
             onClick={() => setIsManagerOpen(true)}
-            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-[#0a142f] hover:bg-[#0f1d40] border border-cyan-500/30 rounded text-sm font-bold uppercase tracking-wider transition-colors text-cyan-400"
+            className="flex-1 md:flex-none flex items-center justify-center gap-1.5 md:gap-2 px-2 md:px-6 py-2.5 bg-[#0a142f] hover:bg-[#0f1d40] border border-cyan-500/30 rounded text-[10px] md:text-sm font-bold uppercase tracking-wider transition-colors text-cyan-400 text-center"
           >
             <Settings className="w-4 h-4" />
             Manage Teams Data
@@ -294,7 +297,7 @@ export default function PointsTableEditor() {
           <button
             onClick={exportPoster}
             disabled={isExporting}
-            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 rounded text-sm font-bold uppercase tracking-wider transition-all hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(6,182,212,0.3)] disabled:opacity-50 disabled:pointer-events-none"
+            className="flex-1 md:flex-none flex items-center justify-center gap-1.5 md:gap-2 px-2 md:px-6 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 rounded text-[10px] md:text-sm font-bold uppercase tracking-wider transition-all hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(6,182,212,0.3)] disabled:opacity-50 disabled:pointer-events-none text-center"
           >
             <Download className="w-4 h-4" />
             {isExporting ? 'Exporting...' : 'Export HD Poster'}

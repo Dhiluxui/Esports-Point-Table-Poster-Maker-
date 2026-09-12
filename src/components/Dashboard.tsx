@@ -45,7 +45,7 @@ export default function Dashboard({ user }: DashboardProps) {
 
   return (
     <div className="min-h-screen bg-[#030712] text-white font-rajdhani">
-      <header className="border-b border-cyan-900/30 bg-[#0a142f]/80 backdrop-blur-md px-6 py-4 sticky top-0 z-40 flex justify-between items-center">
+      <header className="border-b border-cyan-900/30 bg-[#0a142f]/80 backdrop-blur-md px-4 md:px-6 py-4 sticky top-0 z-40 flex flex-row justify-between items-center gap-2">
         <div className="flex items-center gap-3">
           <div className="bg-cyan-500 p-2 rounded-lg shadow-[0_0_15px_rgba(0,204,255,0.4)]">
             <Trophy className="w-6 h-6 text-white" />
@@ -59,7 +59,7 @@ export default function Dashboard({ user }: DashboardProps) {
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-12">
-        <div className="flex justify-between items-end mb-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
           <div>
             <h2 className="text-3xl font-oswald font-black uppercase tracking-wider mb-2">Your Tournaments</h2>
             <p className="text-cyan-400/60">Manage your active tournaments and points tables.</p>
@@ -221,7 +221,7 @@ function TournamentWizard({ onClose, user, onSuccess }: { onClose: () => void, u
 
               <div>
                 <label className="block text-xs font-bold text-cyan-500 uppercase tracking-widest mb-2">Total Number of Slots</label>
-                <div className="flex gap-4">
+                <div className="grid grid-cols-3 md:grid-cols-5 gap-2 md:gap-4">
                   {[24, 48, 72, 96, 144].map(num => (
                     <button 
                       key={num}
@@ -243,7 +243,7 @@ function TournamentWizard({ onClose, user, onSuccess }: { onClose: () => void, u
                 </div>
               </div>
 
-              <div className="flex justify-end pt-6">
+              <div className="flex flex-col md:flex-row justify-end pt-6">
                 <button 
                   disabled={!name.trim()}
                   onClick={() => setStep(2)}
@@ -257,7 +257,7 @@ function TournamentWizard({ onClose, user, onSuccess }: { onClose: () => void, u
 
           {step === 2 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <h3 className="text-2xl font-oswald font-black uppercase text-cyan-300">Format & Phases</h3>
                 <button onClick={handleAddPhase} className="text-xs bg-cyan-900/50 hover:bg-cyan-800 text-cyan-300 px-3 py-1.5 rounded flex items-center gap-1 border border-cyan-700/50 font-bold uppercase tracking-widest transition-colors">
                   <Plus className="w-3 h-3" /> Add Phase
@@ -283,7 +283,7 @@ function TournamentWizard({ onClose, user, onSuccess }: { onClose: () => void, u
                           className="w-full bg-[#050b1a] border border-cyan-900/50 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-cyan-500"
                         />
                       </div>
-                      <div className="w-24">
+                      <div className="w-full md:w-24">
                         <label className="block text-[10px] font-bold text-cyan-500 uppercase tracking-widest mb-1.5">Groups</label>
                         <input 
                           type="number" 
@@ -296,7 +296,7 @@ function TournamentWizard({ onClose, user, onSuccess }: { onClose: () => void, u
                           className="w-full bg-[#050b1a] border border-cyan-900/50 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-cyan-500"
                         />
                       </div>
-                      <div className="w-24">
+                      <div className="w-full md:w-24">
                         <label className="block text-[10px] font-bold text-cyan-500 uppercase tracking-widest mb-1.5">Matches</label>
                         <input 
                           type="number" 
@@ -313,7 +313,7 @@ function TournamentWizard({ onClose, user, onSuccess }: { onClose: () => void, u
                     
                     {idx < phases.length - 1 && (
                       <div className="mt-4 pt-4 border-t border-cyan-900/30 flex flex-col md:flex-row gap-4 items-center bg-cyan-950/20 p-3 rounded-lg">
-                        <div className="flex items-center gap-3 w-full">
+                        <div className="flex flex-wrap items-center gap-3 w-full">
                           <span className="text-xs text-cyan-400 font-semibold uppercase tracking-wider whitespace-nowrap">Top</span>
                           <input 
                             type="number" 
@@ -363,7 +363,7 @@ function TournamentWizard({ onClose, user, onSuccess }: { onClose: () => void, u
                 ))}
               </div>
 
-              <div className="flex justify-between pt-6 border-t border-cyan-900/50">
+              <div className="flex flex-col-reverse md:flex-row justify-between gap-4 pt-6 border-t border-cyan-900/50">
                 <button 
                   onClick={() => setStep(1)}
                   className="text-cyan-400/70 hover:text-cyan-300 font-bold uppercase tracking-wider text-sm transition-colors"

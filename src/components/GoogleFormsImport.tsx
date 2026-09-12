@@ -178,7 +178,7 @@ export default function GoogleFormsImport({ onImport, existingTeamsCount }: Goog
       </div>
       
       <div className="space-y-4">
-        <div className="flex gap-2">
+        <div className="flex flex-col md:flex-row gap-2 md:gap-3">
           <div className="relative flex-1">
             <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-600" />
             <input 
@@ -192,7 +192,7 @@ export default function GoogleFormsImport({ onImport, existingTeamsCount }: Goog
           <button 
             onClick={handleFetchForm}
             disabled={loading || !formUrl.trim()}
-            className="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-lg font-bold uppercase tracking-wider text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[100px]"
+            className="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2.5 rounded-lg font-bold uppercase tracking-wider text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center w-full md:w-auto md:min-w-[100px]"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Fetch Data'}
           </button>
