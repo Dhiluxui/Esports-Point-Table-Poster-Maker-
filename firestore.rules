@@ -17,7 +17,9 @@ service cloud.firestore {
         && data.name is string && data.name.size() <= 100
         && data.slots is number
         && data.createdAt is timestamp
-        && data.updatedAt is timestamp;
+        && data.updatedAt is timestamp
+        && (!data.keys().hasAny(['teams']) || data.teams is list)
+        && (!data.keys().hasAny(['branding']) || data.branding is map);
     }
 
     function isValidPhase(data, tournamentId) {
@@ -35,7 +37,7 @@ service cloud.firestore {
     }
 
     match /tournaments/{tournamentId} {
-      allow read: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow read: if true;
       allow create: if isSignedIn() 
         && isValidId(tournamentId) 
         && isValidTournament(incoming()) 
@@ -48,11 +50,11 @@ service cloud.firestore {
         && incoming().ownerId == existing().ownerId 
         && incoming().createdAt == existing().createdAt 
         && incoming().updatedAt == request.time 
-        && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'slots', 'updatedAt']);
+        && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'slots', 'teams', 'branding', 'updatedAt']);
       allow delete: if isSignedIn() && existing().ownerId == request.auth.uid;
 
       match /phases/{phaseId} {
-        allow read: if isSignedIn() && get(/databases/$(database)/documents/tournaments/$(tournamentId)).data.ownerId == request.auth.uid;
+        allow read: if true;
         allow create: if isSignedIn() 
           && isValidId(tournamentId) 
           && isValidId(phaseId) 

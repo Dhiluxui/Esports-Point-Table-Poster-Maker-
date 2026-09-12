@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User } from 'firebase/auth';
-import { signOut, db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { auth, signOut, db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, query, where, getDocs, addDoc, serverTimestamp, orderBy } from 'firebase/firestore';
 import { Trophy, Plus, LogOut, Loader2, ChevronRight, Play, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -45,17 +45,24 @@ export default function Dashboard({ user }: DashboardProps) {
 
   return (
     <div className="min-h-screen bg-[#030712] text-white font-rajdhani">
-      <header className="border-b border-cyan-900/30 bg-[#0a142f]/80 backdrop-blur-md px-4 md:px-6 py-4 sticky top-0 z-40 flex flex-row justify-between items-center gap-2">
+            <header className="border-b border-cyan-900/30 bg-[#0a142f]/80 backdrop-blur-md px-4 md:px-6 py-4 sticky top-0 z-40 flex flex-row justify-between items-center gap-2">
         <div className="flex items-center gap-3">
           <div className="bg-cyan-500 p-2 rounded-lg shadow-[0_0_15px_rgba(0,204,255,0.4)]">
             <Trophy className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="font-oswald font-black text-xl uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-white to-cyan-400">Tournament Hub</h1>
-            <p className="text-xs text-cyan-400/70 font-semibold tracking-widest uppercase">{user.displayName || 'Organizer'}</p>
+            <h1 className="font-oswald font-black text-xl md:text-2xl uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-white to-cyan-400">Tournament Hub</h1>
+            <p className="text-[10px] md:text-xs text-cyan-400/70 font-semibold tracking-widest uppercase">{user.displayName || 'Organizer'}</p>
           </div>
         </div>
         
+        <button 
+          onClick={() => signOut()}
+          className="flex items-center gap-2 px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors"
+        >
+          <LogOut className="w-4 h-4" />
+          <span className="hidden md:inline">Sign Out</span>
+        </button>
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-12">

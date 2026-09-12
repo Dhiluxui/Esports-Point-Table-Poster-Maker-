@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import * as htmlToImage from 'html-to-image';
 import { useParams, useNavigate } from 'react-router-dom';
-import { collection, query, getDocs, orderBy } from 'firebase/firestore';
-import { db } from './lib/firebase';
+import { collection, query, getDocs, orderBy, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { db, auth } from './lib/firebase';
+import { onAuthStateChanged, User } from 'firebase/auth';
 import { 
   Trophy, 
   Download, 
@@ -26,6 +27,7 @@ import {
 } from 'lucide-react';
 import GoogleFormsImport from './components/GoogleFormsImport';
 import { TeamScore, Branding } from './types';
+import { Copy } from 'lucide-react';
 
 const PLACEMENT_POINTS: Record<number, number> = {
   1: 12, 2: 9, 3: 8, 4: 7, 5: 6, 6: 5,
@@ -60,6 +62,11 @@ export default function PointsTableEditor() {
   const navigate = useNavigate();
   const [phases, setPhases] = useState<Phase[]>([]);
   const [teams, setTeams] = useState<TeamScore[]>(DEFAULT_TEAMS);
+  const [isOwner, setIsOwner] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [copySuccess, setCopySuccess] = useState('');
+
   const [isManagerOpen, setIsManagerOpen] = useState(false);
   const [mobileTab, setMobileTab] = useState<'editor' | 'preview'>('editor');
   const [matchImage, setMatchImage] = useState<string | null>(null);
@@ -99,22 +106,71 @@ export default function PointsTableEditor() {
   const [previewScale, setPreviewScale] = useState(1);
 
   useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
     if (!id) return;
-    const fetchPhases = async () => {
+    
+    const fetchTournamentData = async () => {
       try {
+        const tDoc = await getDoc(doc(db, 'tournaments', id));
+        if (tDoc.exists()) {
+          const data = tDoc.data();
+          if (data.teams && data.teams.length > 0) {
+            setTeams(data.teams);
+          }
+          if (data.branding) {
+            setBranding(data.branding);
+          }
+          
+          if (currentUser && data.ownerId === currentUser.uid) {
+            setIsOwner(true);
+          } else {
+            setIsOwner(false);
+          }
+        }
+
         const q = query(collection(db, `tournaments/${id}/phases`), orderBy('phaseNumber', 'asc'));
         const querySnapshot = await getDocs(q);
-        const data: Phase[] = [];
+        const pData: Phase[] = [];
         querySnapshot.forEach((doc) => {
-          data.push({ id: doc.id, ...doc.data() } as Phase);
+          pData.push({ id: doc.id, ...doc.data() } as Phase);
         });
-        setPhases(data);
+        setPhases(pData);
       } catch (error) {
-        console.error("Error fetching phases: ", error);
+        console.error("Error fetching data: ", error);
       }
     };
-    fetchPhases();
-  }, [id]);
+    
+    fetchTournamentData();
+  }, [id, currentUser]);
+
+  const saveToCloud = async () => {
+    if (!id || !isOwner) return;
+    setIsSaving(true);
+    try {
+      await updateDoc(doc(db, 'tournaments', id), {
+        teams,
+        branding,
+        updatedAt: new Date()
+      });
+    } catch (error) {
+      console.error("Error saving to cloud:", error);
+    }
+    setIsSaving(false);
+  };
+
+  const copyPublicLink = () => {
+    const url = window.location.href;
+    navigator.clipboard.writeText(url);
+    setCopySuccess('Copied!');
+    setTimeout(() => setCopySuccess(''), 2000);
+  };
+
 
   useEffect(() => {
     const updateScale = () => {
@@ -285,22 +341,43 @@ export default function PointsTableEditor() {
           </div>
         </div>
         
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <button
-            onClick={() => setIsManagerOpen(true)}
-            className="flex-1 md:flex-none flex items-center justify-center gap-1.5 md:gap-2 px-2 md:px-6 py-2.5 bg-[#0a142f] hover:bg-[#0f1d40] border border-cyan-500/30 rounded text-[10px] md:text-sm font-bold uppercase tracking-wider transition-colors text-cyan-400 text-center"
-          >
-            <Settings className="w-4 h-4" />
-            Manage Teams Data
-          </button>
+        <div className="flex items-center gap-3 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+          {isOwner && (
+            <>
+              <button
+                onClick={() => setIsManagerOpen(true)}
+                className="flex-1 md:flex-none flex items-center justify-center gap-1.5 md:gap-2 px-3 md:px-4 py-2.5 bg-[#0a142f] hover:bg-[#0f1d40] border border-cyan-500/30 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition-colors text-cyan-400 whitespace-nowrap"
+              >
+                <Settings className="w-3.5 h-3.5" />
+                Manage
+              </button>
+              
+              <button
+                onClick={saveToCloud}
+                disabled={isSaving}
+                className="flex-1 md:flex-none flex items-center justify-center gap-1.5 md:gap-2 px-3 md:px-4 py-2.5 bg-cyan-900/50 hover:bg-cyan-800/80 border border-cyan-500/50 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition-colors text-cyan-300 whitespace-nowrap disabled:opacity-50"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                {isSaving ? 'Saving...' : 'Cloud Sync'}
+              </button>
+
+              <button
+                onClick={copyPublicLink}
+                className="flex-1 md:flex-none flex items-center justify-center gap-1.5 md:gap-2 px-3 md:px-4 py-2.5 bg-blue-900/40 hover:bg-blue-800/60 border border-blue-500/40 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition-colors text-blue-300 whitespace-nowrap"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                {copySuccess || 'Share Link'}
+              </button>
+            </>
+          )}
           
           <button
             onClick={exportPoster}
             disabled={isExporting}
-            className="flex-1 md:flex-none flex items-center justify-center gap-1.5 md:gap-2 px-2 md:px-6 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 rounded text-[10px] md:text-sm font-bold uppercase tracking-wider transition-all hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(6,182,212,0.3)] disabled:opacity-50 disabled:pointer-events-none text-center"
+            className="flex-1 md:flex-none flex items-center justify-center gap-1.5 md:gap-2 px-3 md:px-6 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 rounded text-[10px] md:text-sm font-bold uppercase tracking-wider transition-all hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(6,182,212,0.3)] disabled:opacity-50 disabled:pointer-events-none whitespace-nowrap"
           >
-            <Download className="w-4 h-4" />
-            {isExporting ? 'Exporting...' : 'Export HD Poster'}
+            <Download className="w-4 h-4 hidden md:block" />
+            {isExporting ? 'Exporting...' : 'Export Poster'}
           </button>
         </div>
       </header>
@@ -308,6 +385,7 @@ export default function PointsTableEditor() {
       <main className="flex-1 flex flex-col lg:flex-row min-h-[calc(100vh-130px)] md:h-[calc(100vh-73px)] lg:overflow-hidden">
         
         {/* LEFT PANEL: CONTROLS */}
+        {isOwner && (
         <div className={`w-full lg:w-[450px] flex-shrink-0 border-r-0 lg:border-r border-cyan-900/30 bg-[#070f22] lg:overflow-y-auto hidden-scrollbar ${mobileTab === 'editor' ? 'flex' : 'hidden lg:flex'} flex-col pb-20 lg:pb-0`}>
           
           {/* Reference Image Section */}
@@ -769,9 +847,10 @@ export default function PointsTableEditor() {
             </div>
           </div>
         </div>
+        )}
 
         {/* RIGHT PANEL: POSTER PREVIEW */}
-        <div ref={previewContainerRef} className={`flex-1 bg-[#010815] p-2 lg:p-4 overflow-auto items-center justify-start lg:justify-center relative pb-24 lg:pb-0 ${mobileTab === 'preview' ? 'flex flex-col' : 'hidden lg:flex lg:flex-col'}`} style={{ backgroundImage: 'radial-gradient(circle at center, #021a30 0%, #010815 100%)' }}>
+        <div ref={previewContainerRef} className={`flex-1 bg-[#010815] p-2 lg:p-4 overflow-auto items-center justify-start lg:justify-center relative pb-24 lg:pb-0 ${(!isOwner || mobileTab === 'preview') ? 'flex flex-col' : 'hidden lg:flex lg:flex-col'}`} style={{ backgroundImage: 'radial-gradient(circle at center, #021a30 0%, #010815 100%)' }}>
           
           {/* THE SCALED CANVAS WRAPPER */}
           <div style={{ width: 800 * previewScale, height: 1100 * previewScale }} className="relative flex-shrink-0 transition-transform duration-200">
@@ -1117,7 +1196,8 @@ export default function PointsTableEditor() {
       </main>
 
       {/* MOBILE BOTTOM NAVIGATION */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#070f22] border-t border-cyan-900/50 flex">
+      {isOwner && (
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#070f22] border-t border-cyan-900/50 flex z-50">
         <button
           onClick={() => setMobileTab('editor')}
           className={`flex-1 flex flex-col items-center justify-center gap-1 text-xs font-bold uppercase tracking-widest transition-colors ${mobileTab === 'editor' ? 'text-cyan-400 bg-cyan-950/20' : 'text-cyan-400/50 hover:text-cyan-400/80'}`}
@@ -1134,6 +1214,7 @@ export default function PointsTableEditor() {
           Preview
         </button>
       </div>
+      )}
 
       {/* TEAMS MANAGER MODAL */}
       {isManagerOpen && (
