@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import * as htmlToImage from 'html-to-image';
+import html2canvas from 'html2canvas';
 import { useParams, useNavigate } from 'react-router-dom';
 import { collection, query, getDocs, orderBy, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db, auth } from './lib/firebase';
@@ -283,22 +283,51 @@ export default function PointsTableEditor() {
     if (!posterRef.current) return;
     setIsExporting(true);
     try {
-      const dataUrl = await htmlToImage.toPng(posterRef.current, {
-        pixelRatio: 2, // High quality export but safe for mobile memory limits
+      // Small delay to ensure all DOM is fully painted
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Temporarily reset scale to 1 to ensure html2canvas captures full resolution
+      const originalTransform = posterRef.current.style.transform;
+      posterRef.current.style.transform = 'scale(1)';
+      
+      const canvas = await html2canvas(posterRef.current, {
+        scale: 2,
         backgroundColor: '#0a0a0a',
-        style: {
-          transform: 'scale(1)',
-          transformOrigin: 'top left'
-        }
+        useCORS: true,
+        allowTaint: true,
+        logging: false
       });
+      
+      // Restore scale
+      posterRef.current.style.transform = originalTransform;
+      
+      const dataUrl = canvas.toDataURL('image/png');
       
       // Convert base64 Data URL to Blob for better mobile browser support
       const response = await fetch(dataUrl);
       const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
       
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      
+      // Try native share sheet first on mobile
+      if (isMobile && navigator.share) {
+        try {
+          const file = new File([blob], `FF_Points_Table_${Date.now()}.png`, { type: 'image/png' });
+          await navigator.share({
+            title: 'Points Table',
+            files: [file]
+          });
+          setIsExporting(false);
+          return;
+        } catch (e) {
+          console.log("Native share canceled or failed, falling back to download...", e);
+        }
+      }
+
+      // Fallback to standard anchor download
+      const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.download = `FF_Points_Table_${new Date().getTime()}.png`;
+      link.download = `FF_Points_Table_${Date.now()}.png`;
       link.href = blobUrl;
       document.body.appendChild(link);
       link.click();
@@ -308,7 +337,9 @@ export default function PointsTableEditor() {
       setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
     } catch (err) {
       console.error('Failed to export poster', err);
-      alert('Failed to export poster. Please try again.');
+      
+      // Fallback UI for very strict mobile browsers (like Instagram In-App Browser) that block everything
+      alert('Failed to automatically download. Please screenshot the preview instead, or open in Safari/Chrome.');
     } finally {
       setIsExporting(false);
     }
