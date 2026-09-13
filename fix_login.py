@@ -1,18 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
-import { auth, signInWithGoogle, signOut, db } from './lib/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
-import { LogOut, Trophy, Plus, ChevronRight, X } from 'lucide-react';
-import PointsTableEditor from './PointsTableEditor';
+import re
 
-// Components
-import Dashboard from './components/Dashboard';
+with open('src/App.tsx', 'r') as f:
+    content = f.read()
 
+# Add new imports
+if "createUserWithEmailAndPassword" not in content:
+    content = content.replace("from 'firebase/auth';", "from 'firebase/auth';\nimport { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';")
 
+# Extract LoginScreen out of AppContent
+# First, remove it from inside AppContent
+login_screen_pattern = r'  const LoginScreen = \(\) => \((.*?)\n  \);'
+match = re.search(login_screen_pattern, content, flags=re.DOTALL)
 
-
+if match:
+    content = content.replace(match.group(0), "")
+    
+    new_login_screen = """
 const LoginScreen = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
@@ -114,42 +117,9 @@ const LoginScreen = () => {
     </div>
   );
 };
+"""
+    content = content.replace("function AppContent() {", new_login_screen + "\nfunction AppContent() {")
 
-function AppContent() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+    with open('src/App.tsx', 'w') as f:
+        f.write(content)
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#030712] flex flex-col items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cyan-500 mb-4"></div>
-        <div className="text-cyan-500 font-rajdhani font-bold tracking-widest uppercase">Loading Workspace...</div>
-      </div>
-    );
-  }
-
-
-
-  return (
-    <Routes>
-      <Route path="/" element={user ? <Dashboard user={user} /> : <LoginScreen />} />
-      <Route path="/tournament/:id" element={<PointsTableEditor />} />
-    </Routes>
-  );
-}
-
-export default function App() {
-  return (
-    <BrowserRouter>
-      <AppContent />
-    </BrowserRouter>
-  );
-}
