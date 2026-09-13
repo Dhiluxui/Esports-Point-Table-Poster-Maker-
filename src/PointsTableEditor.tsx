@@ -183,7 +183,7 @@ export default function PointsTableEditor() {
         const containerHeight = previewContainerRef.current.clientHeight - padding;
         
         const scaleByWidth = containerWidth / 800;
-        const scaleByHeight = containerHeight / 1100;
+        const scaleByHeight = containerHeight / 1000;
         
         if (window.innerWidth >= 1024) {
            // Desktop: try to fit entire poster in viewport
@@ -289,13 +289,18 @@ export default function PointsTableEditor() {
       // Small delay to ensure all DOM is fully painted
       await new Promise(resolve => setTimeout(resolve, 500));
       
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       
       const exportOptions = {
+        width: 800,
+        height: 1000,
         scale: isMobile ? 1.5 : 2, // Slightly lower scale on mobile prevents RAM crash on Xiaomi/budget devices
         backgroundColor: '#0a0a0a',
         style: {
           transform: 'scale(1)',
-          transformOrigin: 'top left'
+          transformOrigin: 'top left',
+          width: '800px',
+          height: '1000px'
         },
         fetch: {
           bypassingCache: true
@@ -334,8 +339,6 @@ export default function PointsTableEditor() {
         throw new Error("Generated Blob is 0 bytes.");
       }
 
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      
       if (isMobile) {
         if (navigator.share) {
           try {
@@ -942,14 +945,14 @@ export default function PointsTableEditor() {
             </div>
           )}
           {/* THE SCALED CANVAS WRAPPER */}
-          <div style={{ width: 800 * previewScale, height: 1100 * previewScale }} className="relative flex-shrink-0 transition-transform duration-200">
+          <div style={{ width: 800 * previewScale, height: 1000 * previewScale }} className="relative flex-shrink-0 transition-transform duration-200">
             <div 
               style={{ transform: `scale(${previewScale})` }}
               className="origin-top-left absolute top-0 left-0"
             >
               <div 
                 ref={posterRef}
-                className="relative w-[800px] h-[1100px] bg-gradient-to-br from-[#060e22] via-[#091535] to-[#040b1c] overflow-hidden shadow-[0_0_40px_rgba(6,182,212,0.15)] flex flex-col mx-auto"
+                className="relative w-[800px] h-[1000px] bg-gradient-to-br from-[#060e22] via-[#091535] to-[#040b1c] overflow-hidden shadow-[0_0_40px_rgba(6,182,212,0.15)] flex flex-col mx-auto"
                 style={{
                   backgroundImage: branding.backgroundImage ? `url("${branding.backgroundImage}")` : '',
                   backgroundSize: branding.backgroundImage ? '100% 100%' : '',
@@ -982,7 +985,7 @@ export default function PointsTableEditor() {
                 
                 {/* 1. Tagline */}
                 {branding.tagline ? (
-                  <div className="flex justify-center items-center mb-6 mt-2 w-full px-12">
+                  <div className="flex justify-center items-center mb-3 mt-2 w-full px-12">
                     <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-[var(--theme-primary)]/50"></div>
                     <div className="bg-gradient-to-b from-[var(--theme-bg-accent)] to-[#050b1a] border border-[var(--theme-accent)]/30 rounded-sm px-8 py-1.5 shadow-[0_0_20px_color-mix(in_srgb,var(--theme-accent)_20%,transparent),inset_0_0_10px_color-mix(in_srgb,var(--theme-accent)_10%,transparent)] relative overflow-hidden flex items-center gap-3">
                       <div className="w-1.5 h-1.5 bg-[var(--theme-accent)] rotate-45 shadow-[0_0_8px_var(--theme-accent)]"></div>
@@ -994,17 +997,17 @@ export default function PointsTableEditor() {
                     <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-[var(--theme-primary)]/50"></div>
                   </div>
                 ) : (
-                  <div className="h-[35px] mb-6 mt-2"></div>
+                  <div className="h-[35px] mb-3 mt-2"></div>
                 )}
 
                 {/* 2. Top Header (30/70 Split) */}
-                <div className="relative z-10 w-[88%] mx-auto flex items-center mb-10 overflow-visible">
+                <div className="relative z-10 w-[88%] mx-auto flex items-center mb-4 overflow-visible">
                    {/* 30% Width for Logo */}
-                   <div className="w-[30%] flex justify-center items-center relative h-[155px]">
+                   <div className="w-[30%] flex justify-center items-center relative h-[135px]">
                        {branding.tournamentLogo ? (
                          <img src={branding.tournamentLogo} className="h-[95%] w-[95%] object-contain drop-shadow-[0_15px_25px_rgba(0,0,0,0.5)] relative z-20 scale-125" alt="Tournament Logo" />
                        ) : (
-                         <div className="w-[130px] h-[155px] bg-gradient-to-b from-[var(--theme-bg-accent)]/90 to-[#040b1c] rounded-b-[50px] rounded-t-[16px] border-[3px] border-[var(--theme-primary)]/50 border-t-[var(--theme-accent)]/30 flex items-center justify-center shadow-[0_15px_30px_rgba(0,0,0,0.6),inset_0_4px_15px_color-mix(in_srgb,var(--theme-accent)_20%,transparent)] relative overflow-hidden z-20">
+                         <div className="w-[130px] h-[135px] bg-gradient-to-b from-[var(--theme-bg-accent)]/90 to-[#040b1c] rounded-b-[50px] rounded-t-[16px] border-[3px] border-[var(--theme-primary)]/50 border-t-[var(--theme-accent)]/30 flex items-center justify-center shadow-[0_15px_30px_rgba(0,0,0,0.6),inset_0_4px_15px_color-mix(in_srgb,var(--theme-accent)_20%,transparent)] relative overflow-hidden z-20">
                             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[var(--theme-accent)]/20 via-transparent to-transparent"></div>
                             <Shield className="w-16 h-16 text-[var(--theme-accent)] relative z-10 drop-shadow-[0_0_15px_color-mix(in_srgb,var(--theme-accent)_50%,transparent)]" />
                          </div>
@@ -1024,8 +1027,8 @@ export default function PointsTableEditor() {
                             key={i} 
                             className={`block leading-[0.9] ${
                               i === 0 
-                                ? 'text-[65px] font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-[#cbd5e1] drop-shadow-[0_4px_12px_rgba(255,255,255,0.3)] tracking-wide' 
-                                : 'text-[72px] font-black text-transparent bg-clip-text bg-gradient-to-b from-[var(--theme-accent)] to-[var(--theme-primary)] drop-shadow-[0_4px_15px_color-mix(in_srgb,var(--theme-primary)_60%,transparent)] tracking-wider -mt-2'
+                                ? 'text-[62px] font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-[#cbd5e1] drop-shadow-[0_4px_12px_rgba(255,255,255,0.3)] tracking-wide' 
+                                : 'text-[68px] font-black text-transparent bg-clip-text bg-gradient-to-b from-[var(--theme-accent)] to-[var(--theme-primary)] drop-shadow-[0_4px_15px_color-mix(in_srgb,var(--theme-primary)_60%,transparent)] tracking-wider -mt-2'
                             }`}
                             style={{ WebkitTextStroke: i === 0 ? '1px rgba(255,255,255,0.2)' : '2px rgba(0,30,150,0.3)' }}
                           >
@@ -1055,7 +1058,7 @@ export default function PointsTableEditor() {
 
                 {/* --- Phase Details Strip --- */}
                 {branding.phaseDetails?.enabled && (
-                  <div className="relative z-20 w-[86%] mx-auto flex flex-wrap items-center justify-between bg-black/70 backdrop-blur-md border-l-4 border-l-[var(--theme-accent)] border-y border-r border-[var(--theme-accent)]/20 text-white font-rajdhani font-bold tracking-widest px-4 py-1.5 mb-2 rounded-r-sm shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
+                  <div className="relative z-20 w-[86%] mx-auto flex flex-wrap items-center justify-between bg-black/70 backdrop-blur-md border-l-4 border-l-[var(--theme-accent)] border-y border-r border-[var(--theme-accent)]/20 text-white font-rajdhani font-bold tracking-widest px-4 py-1.5 mb-1.5 rounded-r-sm shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
                     <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-[14px]">
                       {branding.phaseDetails.groupCount && (
                         <div className="flex items-center gap-2">
@@ -1088,7 +1091,7 @@ export default function PointsTableEditor() {
                 {/* 3. Main Data Table */}
                 <div className="relative z-20 w-[86%] mx-auto flex flex-col bg-transparent">
                              {/* Table Header */}
-                  <div className="h-[38px] bg-[var(--theme-primary)] text-white flex items-center px-4 rounded-t-sm shadow-[0_5px_15px_rgba(0,0,0,0.4)] mb-[3px] border-b-[3px] border-[var(--theme-accent)] relative overflow-hidden">
+                  <div className="h-[34px] bg-[var(--theme-primary)] text-white flex items-center px-4 rounded-t-sm shadow-[0_5px_15px_rgba(0,0,0,0.4)] mb-[3px] border-b-[3px] border-[var(--theme-accent)] relative overflow-hidden">
                     <div className="absolute top-0 right-0 h-full w-[30%] bg-gradient-to-l from-white/10 to-transparent pointer-events-none"></div>
                     <div className="flex-1 flex px-2 font-rajdhani font-bold text-[14px] tracking-wider uppercase items-center relative z-10">
                        {hasStatusColumn && <div className="w-[5%] shrink-0"></div>} {/* Q/E */}
@@ -1104,7 +1107,7 @@ export default function PointsTableEditor() {
                   </div>
 
                   {/* Table Rows */}
-                  <div className="flex flex-col gap-[3px]">
+                  <div className="flex flex-col gap-[2px]">
                      {teams.slice(0, 12).map((team, index) => {
                         const isRank1 = index === 0;
                         const isQualified = index < (branding.qualificationThreshold ?? 9);
@@ -1126,7 +1129,7 @@ export default function PointsTableEditor() {
                         const textColor = index === 0 && !isChampionRush ? 'text-[#0a142f]' : 'text-white';
                         const secTextColor = index === 0 && !isChampionRush ? 'text-[var(--theme-primary)]' : 'text-[var(--theme-accent)]';
                         
-                        const rowClass = `h-[40px] flex items-center px-4 ${bgColor} ${textColor} rounded-sm shadow-sm relative overflow-hidden transition-all duration-300`;
+                        const rowClass = `h-[37px] flex items-center px-4 ${bgColor} ${textColor} rounded-sm shadow-sm relative overflow-hidden transition-all duration-300`;
 
                         return (
                           <div key={team.id} className={rowClass} style={isRank1 ? { filter: 'drop-shadow(0px 8px 15px rgba(0,0,0,0.7))' } : {}}>
@@ -1204,11 +1207,11 @@ export default function PointsTableEditor() {
                               </div>
 
                                {/* Stats */}
-                               {branding.showMatches !== false && <div className={`w-[8%] shrink-0 text-center font-rajdhani text-[20px] font-semibold ${isRank1 ? 'text-[var(--theme-primary)]' : 'text-white/80'}`}>{team.matchesPlayed}</div>}
-                              <div className={`w-[8%] shrink-0 text-center font-rajdhani text-[20px] font-semibold ${isRank1 ? 'text-[var(--theme-primary)]' : 'text-white/90'}`}>{team.booyahs}</div>
-                              <div className={`w-[14%] shrink-0 text-center font-rajdhani text-[19px] font-bold ${isRank1 ? 'text-[#0a142f]' : index < 3 ? 'text-white drop-shadow-sm' : 'text-[var(--theme-accent)]'}`}>{team.placementPoints}</div>
-                              <div className={`w-[8%] shrink-0 text-center font-rajdhani text-[19px] font-bold ${isRank1 ? 'text-[var(--theme-primary)]' : 'text-white'}`}>{team.killPoints}</div>
-                              <div className={`w-[12%] shrink-0 text-center font-rajdhani text-[24px] font-black pb-0.5 ${isRank1 ? 'drop-shadow-md text-[#0a142f]' : 'drop-shadow-md text-white'}`}>
+                               {branding.showMatches !== false && <div className={`w-[8%] shrink-0 text-center font-rajdhani text-[18px] font-semibold ${isRank1 ? 'text-[var(--theme-primary)]' : 'text-white/80'}`}>{team.matchesPlayed}</div>}
+                              <div className={`w-[8%] shrink-0 text-center font-rajdhani text-[18px] font-semibold ${isRank1 ? 'text-[var(--theme-primary)]' : 'text-white/90'}`}>{team.booyahs}</div>
+                              <div className={`w-[14%] shrink-0 text-center font-rajdhani text-[17px] font-bold ${isRank1 ? 'text-[#0a142f]' : index < 3 ? 'text-white drop-shadow-sm' : 'text-[var(--theme-accent)]'}`}>{team.placementPoints}</div>
+                              <div className={`w-[8%] shrink-0 text-center font-rajdhani text-[17px] font-bold ${isRank1 ? 'text-[var(--theme-primary)]' : 'text-white'}`}>{team.killPoints}</div>
+                              <div className={`w-[12%] shrink-0 text-center font-rajdhani text-[22px] font-black pb-0.5 ${isRank1 ? 'drop-shadow-md text-[#0a142f]' : 'drop-shadow-md text-white'}`}>
                                 {team.totalPoints}
                               </div>
                             </div>
@@ -1219,9 +1222,9 @@ export default function PointsTableEditor() {
 
                 </div>
                 
-                <div className="flex-1 flex flex-col justify-end px-10 pb-6">
+                <div className="flex-1 flex flex-col justify-end px-10 pb-4">
                   {/* Venue Row */}
-                  <div className="flex items-center justify-center gap-3 w-full mb-4">
+                  <div className="flex items-center justify-center gap-3 w-full mb-2">
                     <span className="text-white font-rajdhani font-bold text-[26px] tracking-wide drop-shadow-md">Venue -</span>
                     <div className="w-[80px] min-h-[50px] flex items-center justify-center">
                        {branding.collegeLogo ? (
@@ -1533,35 +1536,7 @@ export default function PointsTableEditor() {
       )}
 
 
-      {/* SCREENSHOT MODE OVERLAY */}
-      {screenshotMode && (
-        <div className="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center">
-          <div className="absolute top-4 left-0 right-0 flex justify-between items-center px-4 z-50">
-            <div className="bg-black/50 text-cyan-400 text-xs px-3 py-1.5 rounded-full border border-cyan-500/30 backdrop-blur-md animate-pulse">
-              Take a screenshot now!
-            </div>
-            <button 
-              onClick={() => setScreenshotMode(false)}
-              className="p-3 bg-red-600 hover:bg-red-500 rounded-full text-white shadow-lg transition-all flex items-center gap-2"
-            >
-              <X className="w-5 h-5" />
-              <span className="text-sm font-bold pr-1">Close</span>
-            </button>
-          </div>
-          
-          <div className="w-full h-full flex items-center justify-center overflow-auto" style={{
-            /* Scale it to fit the screen height exactly for a perfect screenshot */
-            transform: `scale(${Math.min(window.innerWidth / 800, window.innerHeight / 1100) * 0.95})`
-          }}>
-            <div 
-              style={{ width: '800px', height: '1100px' }} 
-              className="flex-shrink-0 origin-center pointer-events-none"
-            >
-              <PosterPreview />
-            </div>
-          </div>
-        </div>
-      )}
+      
 
     </div>
   );
