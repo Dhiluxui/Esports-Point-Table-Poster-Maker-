@@ -17,7 +17,7 @@ import {
   Upload,
   Instagram,
   Youtube,
-  Trash2,
+  Maximize2, Download, Trash2,
   Video,
   MessageSquare,
   X,
@@ -100,6 +100,7 @@ export default function PointsTableEditor() {
   const [kills, setKills] = useState<number>(0);
   const [position, setPosition] = useState<number>(1);
   const [isExporting, setIsExporting] = useState(false);
+  const [screenshotMode, setScreenshotMode] = useState(false);
   const [exportedImage, setExportedImage] = useState<string | null>(null);
 
   const posterRef = useRef<HTMLDivElement>(null);
@@ -372,7 +373,9 @@ export default function PointsTableEditor() {
       setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
     } catch (err) {
       console.error('Failed to export poster', err);
-      alert('Failed to process image due to mobile browser limitations. Try taking a screenshot, or use Chrome on Desktop.');
+      if (window.confirm('Your device browser blocked the automatic export. Would you like to open Fullscreen Mode so you can take a screenshot instead?')) {
+        setScreenshotMode(true);
+      }
     } finally {
       setIsExporting(false);
     }
@@ -389,7 +392,7 @@ export default function PointsTableEditor() {
 
   return (
     <div className="min-h-screen bg-[#030712] text-white flex flex-col font-rajdhani selection:bg-cyan-500/30">
-      <header className="border-b border-white/5 bg-[#0b132b]/80 backdrop-blur-md px-4 md:px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-50">
+      <header className={`border-b border-white/5 bg-[#0b132b]/80 backdrop-blur-md px-4 md:px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-50 ${screenshotMode ? 'hidden' : ''}`}>
         <div className="flex items-center gap-3">
           <button onClick={() => navigate('/')} className="w-10 h-10 rounded bg-[#0a142f] flex items-center justify-center text-cyan-500 hover:text-white hover:bg-cyan-600 transition-colors shrink-0">
             <ArrowLeft className="w-5 h-5" />
@@ -436,6 +439,14 @@ export default function PointsTableEditor() {
           )}
           
           <button
+            onClick={() => setScreenshotMode(true)}
+            className="flex-1 md:flex-none flex items-center justify-center gap-1.5 md:gap-2 px-3 md:px-4 py-2.5 bg-purple-900/40 hover:bg-purple-800/60 border border-purple-500/40 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition-colors text-purple-300 whitespace-nowrap lg:hidden"
+          >
+            <Maximize2 className="w-3.5 h-3.5" />
+            Screenshot Mode
+          </button>
+          
+          <button
             onClick={exportPoster}
             disabled={isExporting}
             className="flex-1 md:flex-none flex items-center justify-center gap-1.5 md:gap-2 px-3 md:px-6 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 rounded text-[10px] md:text-sm font-bold uppercase tracking-wider transition-all hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(6,182,212,0.3)] disabled:opacity-50 disabled:pointer-events-none whitespace-nowrap"
@@ -446,11 +457,11 @@ export default function PointsTableEditor() {
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col lg:flex-row min-h-[calc(100vh-130px)] md:h-[calc(100vh-73px)] lg:overflow-hidden">
+      <main className={`flex-1 flex flex-col lg:flex-row min-h-[calc(100vh-130px)] md:h-[calc(100vh-73px)] lg:overflow-hidden ${screenshotMode ? 'fixed inset-0 z-[9999] bg-black' : ''}`}>
         
         {/* LEFT PANEL: CONTROLS */}
         {isOwner && (
-        <div className={`w-full lg:w-[450px] flex-shrink-0 border-r-0 lg:border-r border-cyan-900/30 bg-[#070f22] lg:overflow-y-auto hidden-scrollbar ${mobileTab === 'editor' ? 'flex' : 'hidden lg:flex'} flex-col pb-20 lg:pb-0`}>
+        <div className={`w-full lg:w-[450px] flex-shrink-0 border-r-0 lg:border-r border-cyan-900/30 bg-[#070f22] lg:overflow-y-auto hidden-scrollbar ${mobileTab === 'editor' && !screenshotMode ? 'flex' : 'hidden lg:flex'} ${screenshotMode ? '-hidden' : ''} flex-col pb-20 lg:pb-0`} style={{ display: screenshotMode ? 'none' : undefined }}>
           
           {/* Reference Image Section */}
           <div className="p-6 border-b border-cyan-900/30 bg-[#040915]">
@@ -647,7 +658,7 @@ export default function PointsTableEditor() {
                     <div className="bg-[#0a142f] p-2 rounded-lg border border-cyan-500/10 flex flex-col">
                       <label className="block text-[9px] font-semibold text-cyan-400/70 uppercase tracking-widest mb-2 text-center">Center Shield</label>
                       <label className="flex-1 flex justify-center items-center p-2 border border-dashed border-cyan-500/20 rounded hover:bg-[#0f1d40] cursor-pointer bg-[#050b1a]/50">
-                        <img src={branding.tournamentLogo || "https://i.ibb.co/Q7wZKMNy/edited-photo.png"} alt="Center" className="h-6 object-contain opacity-70 hover:opacity-100 transition-all" />
+                        <img src={branding.tournamentLogo || "/assets/default-logo.png"} alt="Center" className="h-6 object-contain opacity-70 hover:opacity-100 transition-all" />
                         <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'tournament')} />
                       </label>
                       {branding.tournamentLogo && branding.tournamentLogo !== '/assets/default-logo.png' && (
@@ -914,8 +925,22 @@ export default function PointsTableEditor() {
         )}
 
         {/* RIGHT PANEL: POSTER PREVIEW */}
-        <div ref={previewContainerRef} className={`flex-1 bg-[#010815] p-2 lg:p-4 overflow-auto items-center justify-start lg:justify-center relative pb-24 lg:pb-0 ${(!isOwner || mobileTab === 'preview') ? 'flex flex-col' : 'hidden lg:flex lg:flex-col'}`} style={{ backgroundImage: 'radial-gradient(circle at center, #021a30 0%, #010815 100%)' }}>
+        <div ref={previewContainerRef} className={`flex-1 bg-[#010815] p-2 lg:p-4 overflow-auto items-center justify-center relative ${screenshotMode ? 'fixed inset-0 z-[9999] w-full h-full pb-0 bg-black' : 'pb-24 lg:pb-0'} ${(!isOwner || mobileTab === 'preview' || screenshotMode) ? 'flex flex-col' : 'hidden lg:flex lg:flex-col'}`} style={{ backgroundImage: 'radial-gradient(circle at center, #021a30 0%, #010815 100%)' }}>
           
+                    {screenshotMode && (
+            <div className="absolute top-4 left-0 right-0 flex justify-between items-center px-4 z-50 w-full max-w-md mx-auto">
+              <div className="bg-black/80 text-cyan-400 text-xs px-3 py-1.5 rounded-full border border-cyan-500/30 backdrop-blur-md animate-pulse font-bold shadow-lg shadow-cyan-900/50">
+                Take a screenshot now!
+              </div>
+              <button 
+                onClick={() => setScreenshotMode(false)}
+                className="p-2 bg-red-600 hover:bg-red-500 rounded-full text-white shadow-lg transition-all flex items-center gap-1 border border-red-400/50"
+              >
+                <X className="w-4 h-4" />
+                <span className="text-xs font-bold pr-1">Exit</span>
+              </button>
+            </div>
+          )}
           {/* THE SCALED CANVAS WRAPPER */}
           <div style={{ width: 800 * previewScale, height: 1100 * previewScale }} className="relative flex-shrink-0 transition-transform duration-200">
             <div 
@@ -1503,6 +1528,37 @@ export default function PointsTableEditor() {
             >
               Done
             </button>
+          </div>
+        </div>
+      )}
+
+
+      {/* SCREENSHOT MODE OVERLAY */}
+      {screenshotMode && (
+        <div className="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center">
+          <div className="absolute top-4 left-0 right-0 flex justify-between items-center px-4 z-50">
+            <div className="bg-black/50 text-cyan-400 text-xs px-3 py-1.5 rounded-full border border-cyan-500/30 backdrop-blur-md animate-pulse">
+              Take a screenshot now!
+            </div>
+            <button 
+              onClick={() => setScreenshotMode(false)}
+              className="p-3 bg-red-600 hover:bg-red-500 rounded-full text-white shadow-lg transition-all flex items-center gap-2"
+            >
+              <X className="w-5 h-5" />
+              <span className="text-sm font-bold pr-1">Close</span>
+            </button>
+          </div>
+          
+          <div className="w-full h-full flex items-center justify-center overflow-auto" style={{
+            /* Scale it to fit the screen height exactly for a perfect screenshot */
+            transform: `scale(${Math.min(window.innerWidth / 800, window.innerHeight / 1100) * 0.95})`
+          }}>
+            <div 
+              style={{ width: '800px', height: '1100px' }} 
+              className="flex-shrink-0 origin-center pointer-events-none"
+            >
+              <PosterPreview />
+            </div>
           </div>
         </div>
       )}
