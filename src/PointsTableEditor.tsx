@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import * as htmlToImage from 'html-to-image';
+import { domToPng } from 'modern-screenshot';
 import { useParams, useNavigate } from 'react-router-dom';
 import { collection, query, getDocs, orderBy, doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from './lib/firebase';
@@ -71,10 +71,10 @@ export default function PointsTableEditor() {
   const [mobileTab, setMobileTab] = useState<'editor' | 'preview'>('editor');
   const [matchImage, setMatchImage] = useState<string | null>(null);
   const [branding, setBranding] = useState<Branding>({
-    backgroundImage: 'https://i.ibb.co/jtBpNKy/ff3296e8-d09a-4995-841a-c67ae36fc17d.jpg',
-    tournamentLogo: 'https://i.ibb.co/Q7wZKMNy/edited-photo.png',
-    topLeftLogo: 'https://i.ibb.co/LzVwR5w6/i-need-only-logo-now-202606011213-removebg-preview.png',
-    topRightLogo: 'https://i.ibb.co/6cdfW7yW/Whats-App-Image-2026-05-04-at-5-47-10-PM-1-removebg-preview.png',
+    backgroundImage: '/assets/default-bg.jpg',
+    tournamentLogo: '/assets/default-logo.png',
+    topLeftLogo: '/assets/default-tl.png',
+    topRightLogo: '/assets/default-tr.png',
     instagramHandle: '@magadh_striker',
     youtubeHandle: 'Magadh Striker',
     discordHandle: 'Magadh Striker',
@@ -84,8 +84,8 @@ export default function PointsTableEditor() {
     subtitle: 'DAY 01 | SEMIFINAL G1',
     stageName: '',
     footerText: 'MAGADH STRIKER 2026',
-    sponsorLogo: 'https://i.ibb.co/LLBfHtC/IMG-3269-2.png',
-    collegeLogo: 'https://i.ibb.co/3m3JZCY0/edited-photo-1.png',
+    sponsorLogo: '/assets/default-sponsor.png',
+    collegeLogo: '/assets/default-college.png',
     sponsorName: 'Deathwish',
     showTeamLogos: true,
     showQualification: true,
@@ -288,23 +288,34 @@ export default function PointsTableEditor() {
       // Small delay to ensure all DOM is fully painted
       await new Promise(resolve => setTimeout(resolve, 500));
       
+      
       const exportOptions = {
-        pixelRatio: 2,
+        scale: isMobile ? 1.5 : 2, // Slightly lower scale on mobile prevents RAM crash on Xiaomi/budget devices
         backgroundColor: '#0a0a0a',
         style: {
           transform: 'scale(1)',
           transformOrigin: 'top left'
         },
-        cacheBust: true,
+        fetch: {
+          bypassingCache: true
+        }
       };
 
-      // Workaround for mobile/Safari: Do a dummy render first to load assets into cache
-      await htmlToImage.toPng(posterRef.current, { ...exportOptions, pixelRatio: 1 });
+      // modern-screenshot is specifically built to fix iOS Safari empty canvas bugs
+      // and it supports modern CSS like oklab because it uses native foreignObject
+      let dataUrl = '';
       
-      const dataUrl = await htmlToImage.toPng(posterRef.current, exportOptions);
+      try {
+        dataUrl = await domToPng(posterRef.current, exportOptions);
+      } catch (e) {
+        console.warn("First render pass failed, retrying...", e);
+        // Sometimes mobile browsers need a second pass
+        await new Promise(resolve => setTimeout(resolve, 800));
+        dataUrl = await domToPng(posterRef.current, exportOptions);
+      }
       
       if (!dataUrl || dataUrl === 'data:,' || dataUrl.length < 100) {
-        throw new Error("Image generation failed (empty canvas).");
+        throw new Error("Image generation failed (empty canvas returned by browser).");
       }
       
       // Robust Base64 to Blob converter (avoids fetch(dataUrl) which fails on some mobile browsers)
@@ -361,7 +372,7 @@ export default function PointsTableEditor() {
       setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
     } catch (err) {
       console.error('Failed to export poster', err);
-      alert('Failed to process image. Make sure all uploaded logos are valid images.');
+      alert('Failed to process image due to mobile browser limitations. Try taking a screenshot, or use Chrome on Desktop.');
     } finally {
       setIsExporting(false);
     }
@@ -624,11 +635,11 @@ export default function PointsTableEditor() {
                     <label className="block text-[10px] font-semibold text-cyan-400/70 uppercase tracking-widest mb-1.5">Background Image</label>
                     <label className="flex items-center justify-center p-3 border border-dashed border-cyan-500/30 rounded-lg bg-[#0a142f] hover:bg-[#0f1d40] transition-colors cursor-pointer text-sm text-cyan-100 font-medium text-center">
                         <Upload className="w-4 h-4 mr-2 text-cyan-400 flex-shrink-0" /> 
-                        {branding.backgroundImage === 'https://i.ibb.co/jtBpNKy/ff3296e8-d09a-4995-841a-c67ae36fc17d.jpg' ? 'Replace Default BG' : 'Change Background'}
+                        {branding.backgroundImage === '/assets/default-bg.jpg' ? 'Replace Default BG' : 'Change Background'}
                         <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'background')} />
                     </label>
-                    {branding.backgroundImage && branding.backgroundImage !== 'https://i.ibb.co/jtBpNKy/ff3296e8-d09a-4995-841a-c67ae36fc17d.jpg' && (
-                      <button onClick={() => setBranding(p => ({...p, backgroundImage: 'https://i.ibb.co/jtBpNKy/ff3296e8-d09a-4995-841a-c67ae36fc17d.jpg'}))} className="mt-2 text-[10px] text-red-400 hover:text-red-300 uppercase font-semibold flex items-center justify-center w-full bg-red-950/20 py-1.5 rounded">Remove Custom Background</button>
+                    {branding.backgroundImage && branding.backgroundImage !== '/assets/default-bg.jpg' && (
+                      <button onClick={() => setBranding(p => ({...p, backgroundImage: '/assets/default-bg.jpg'}))} className="mt-2 text-[10px] text-red-400 hover:text-red-300 uppercase font-semibold flex items-center justify-center w-full bg-red-950/20 py-1.5 rounded">Remove Custom Background</button>
                     )}
                   </div>
 
@@ -639,8 +650,8 @@ export default function PointsTableEditor() {
                         <img src={branding.tournamentLogo || "https://i.ibb.co/Q7wZKMNy/edited-photo.png"} alt="Center" className="h-6 object-contain opacity-70 hover:opacity-100 transition-all" />
                         <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'tournament')} />
                       </label>
-                      {branding.tournamentLogo && branding.tournamentLogo !== 'https://i.ibb.co/Q7wZKMNy/edited-photo.png' && (
-                        <button onClick={() => setBranding(p => ({...p, tournamentLogo: 'https://i.ibb.co/Q7wZKMNy/edited-photo.png'}))} className="mt-2 w-full text-[9px] text-red-400 hover:text-red-300 uppercase font-bold text-center">Reset</button>
+                      {branding.tournamentLogo && branding.tournamentLogo !== '/assets/default-logo.png' && (
+                        <button onClick={() => setBranding(p => ({...p, tournamentLogo: '/assets/default-logo.png'}))} className="mt-2 w-full text-[9px] text-red-400 hover:text-red-300 uppercase font-bold text-center">Reset</button>
                       )}
                     </div>
                     <div className="bg-[#0a142f] p-2 rounded-lg border border-cyan-500/10 flex flex-col">
@@ -649,8 +660,8 @@ export default function PointsTableEditor() {
                         {branding.topLeftLogo ? <img src={branding.topLeftLogo} className="h-6 object-contain grayscale blend-screen opacity-70 hover:grayscale-0 hover:opacity-100 transition-all" /> : <Shield className="h-6 w-6 text-cyan-800 hover:text-cyan-400" />}
                         <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'topLeft')} />
                       </label>
-                      {branding.topLeftLogo && branding.topLeftLogo !== 'https://i.ibb.co/LzVwR5w6/i-need-only-logo-now-202606011213-removebg-preview.png' && (
-                        <button onClick={() => setBranding(p => ({...p, topLeftLogo: 'https://i.ibb.co/LzVwR5w6/i-need-only-logo-now-202606011213-removebg-preview.png'}))} className="mt-2 w-full text-[9px] text-red-400 hover:text-red-300 uppercase font-bold text-center">Reset</button>
+                      {branding.topLeftLogo && branding.topLeftLogo !== '/assets/default-tl.png' && (
+                        <button onClick={() => setBranding(p => ({...p, topLeftLogo: '/assets/default-tl.png'}))} className="mt-2 w-full text-[9px] text-red-400 hover:text-red-300 uppercase font-bold text-center">Reset</button>
                       )}
                     </div>
                     <div className="bg-[#0a142f] p-2 rounded-lg border border-cyan-500/10 flex flex-col">
@@ -659,8 +670,8 @@ export default function PointsTableEditor() {
                         {branding.topRightLogo ? <img src={branding.topRightLogo} className="h-6 object-contain grayscale blend-screen opacity-70 hover:grayscale-0 hover:opacity-100 transition-all" /> : <Shield className="h-6 w-6 text-cyan-800 hover:text-cyan-400" />}
                         <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'topRight')} />
                       </label>
-                      {branding.topRightLogo && branding.topRightLogo !== 'https://i.ibb.co/6cdfW7yW/Whats-App-Image-2026-05-04-at-5-47-10-PM-1-removebg-preview.png' && (
-                        <button onClick={() => setBranding(p => ({...p, topRightLogo: 'https://i.ibb.co/6cdfW7yW/Whats-App-Image-2026-05-04-at-5-47-10-PM-1-removebg-preview.png'}))} className="mt-2 w-full text-[9px] text-red-400 hover:text-red-300 uppercase font-bold text-center">Reset</button>
+                      {branding.topRightLogo && branding.topRightLogo !== '/assets/default-tr.png' && (
+                        <button onClick={() => setBranding(p => ({...p, topRightLogo: '/assets/default-tr.png'}))} className="mt-2 w-full text-[9px] text-red-400 hover:text-red-300 uppercase font-bold text-center">Reset</button>
                       )}
                     </div>
                   </div>
@@ -672,8 +683,8 @@ export default function PointsTableEditor() {
                         {branding.sponsorLogo ? <img src={branding.sponsorLogo} className="h-6 object-contain grayscale blend-screen opacity-70 hover:grayscale-0 hover:opacity-100 transition-all" /> : <Shield className="h-6 w-6 text-cyan-800 hover:text-cyan-400" />}
                         <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'sponsor')} />
                       </label>
-                      {branding.sponsorLogo && branding.sponsorLogo !== 'https://i.ibb.co/LLBfHtC/IMG-3269-2.png' && (
-                        <button onClick={() => setBranding(p => ({...p, sponsorLogo: 'https://i.ibb.co/LLBfHtC/IMG-3269-2.png'}))} className="mt-2 w-full text-[9px] text-red-400 hover:text-red-300 uppercase font-bold text-center">Reset</button>
+                      {branding.sponsorLogo && branding.sponsorLogo !== '/assets/default-sponsor.png' && (
+                        <button onClick={() => setBranding(p => ({...p, sponsorLogo: '/assets/default-sponsor.png'}))} className="mt-2 w-full text-[9px] text-red-400 hover:text-red-300 uppercase font-bold text-center">Reset</button>
                       )}
                     </div>
                     <div className="bg-[#0a142f] p-2 rounded-lg border border-cyan-500/10 flex flex-col">
@@ -683,8 +694,8 @@ export default function PointsTableEditor() {
                         <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'college')} />
                       </label>
                       {branding.collegeLogo && (
-                        <button onClick={() => setBranding(p => ({...p, collegeLogo: branding.collegeLogo === 'https://i.ibb.co/3m3JZCY0/edited-photo-1.png' ? null : 'https://i.ibb.co/3m3JZCY0/edited-photo-1.png'}))} className="mt-2 w-full text-[9px] text-red-400 hover:text-red-300 uppercase font-bold text-center">
-                          {branding.collegeLogo === 'https://i.ibb.co/3m3JZCY0/edited-photo-1.png' ? 'Remove' : 'Reset'}
+                        <button onClick={() => setBranding(p => ({...p, collegeLogo: branding.collegeLogo === '/assets/default-college.png' ? null : '/assets/default-college.png'}))} className="mt-2 w-full text-[9px] text-red-400 hover:text-red-300 uppercase font-bold text-center">
+                          {branding.collegeLogo === '/assets/default-college.png' ? 'Remove' : 'Reset'}
                         </button>
                       )}
                     </div>
