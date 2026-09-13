@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import * as htmlToImage from 'html-to-image';
 import { useParams, useNavigate } from 'react-router-dom';
-import { collection, query, getDocs, orderBy, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, getDocs, orderBy, doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from './lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { 
@@ -157,10 +157,11 @@ export default function PointsTableEditor() {
       await updateDoc(doc(db, 'tournaments', id), {
         teams,
         branding,
-        updatedAt: new Date()
+        updatedAt: serverTimestamp()
       });
     } catch (error) {
       console.error("Error saving to cloud:", error);
+      alert("Failed to save. Please make sure you are logged in and own this tournament.");
     }
     setIsSaving(false);
   };
@@ -287,50 +288,68 @@ export default function PointsTableEditor() {
       // Small delay to ensure all DOM is fully painted
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Temporarily reset scale to 1 to ensure html2canvas captures full resolution
-      const originalTransform = posterRef.current.style.transform;
-      posterRef.current.style.transform = 'scale(1)';
-      
-      const dataUrl = await htmlToImage.toPng(posterRef.current, {
+      const exportOptions = {
         pixelRatio: 2,
         backgroundColor: '#0a0a0a',
         style: {
           transform: 'scale(1)',
           transformOrigin: 'top left'
-        }
-      });
+        },
+        cacheBust: true,
+      };
+
+      // Workaround for mobile/Safari: Do a dummy render first to load assets into cache
+      await htmlToImage.toPng(posterRef.current, { ...exportOptions, pixelRatio: 1 });
       
+      const dataUrl = await htmlToImage.toPng(posterRef.current, exportOptions);
+      
+      if (!dataUrl || dataUrl === 'data:,' || dataUrl.length < 100) {
+        throw new Error("Image generation failed (empty canvas).");
+      }
+      
+      // Robust Base64 to Blob converter (avoids fetch(dataUrl) which fails on some mobile browsers)
+      const arr = dataUrl.split(',');
+      const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/png';
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while(n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+      }
+      const blob = new Blob([u8arr], {type: mime});
+      
+      if (blob.size === 0) {
+        throw new Error("Generated Blob is 0 bytes.");
+      }
+
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       
       if (isMobile) {
-        // Attempt native share if available
         if (navigator.share) {
           try {
-            const response = await fetch(dataUrl);
-            const blob = await response.blob();
-            const file = new File([blob], `FF_Points_Table_${Date.now()}.png`, { type: 'image/png' });
+            const file = new File([blob], `FF_Points_Table_${Date.now()}.png`, { type: mime });
             await navigator.share({
               title: 'Points Table',
               files: [file]
             });
             setIsExporting(false);
             return;
-          } catch (e) {
+          } catch (e: any) {
             console.log("Native share canceled or failed", e);
-            // Fallthrough to show the modal below
+            if (e.name === 'AbortError') {
+               setIsExporting(false);
+               return; // User cancelled, don't show modal
+            }
           }
         }
         
-        // If we reach here on mobile, either share API is missing (in-app browser) or it failed.
-        // Show the bulletproof fallback modal.
+        // Show modal fallback
         setExportedImage(dataUrl);
         setIsExporting(false);
         return;
       }
 
       // Desktop: Fallback to standard anchor download
-      const response = await fetch(dataUrl);
-      const blob = await response.blob();
       const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.download = `FF_Points_Table_${Date.now()}.png`;
@@ -342,7 +361,7 @@ export default function PointsTableEditor() {
       setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
     } catch (err) {
       console.error('Failed to export poster', err);
-      alert('Failed to process image. Please make sure all uploaded logos are valid images.');
+      alert('Failed to process image. Make sure all uploaded logos are valid images.');
     } finally {
       setIsExporting(false);
     }
