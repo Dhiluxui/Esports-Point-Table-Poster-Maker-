@@ -41,6 +41,7 @@ export interface Branding {
     extraInfo?: string;
   };
   sponsorName?: string;
+  templateStyle?: string;
   theme?: {
     primaryColor?: string;
     accentColor?: string;
