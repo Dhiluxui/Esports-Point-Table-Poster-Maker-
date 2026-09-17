@@ -420,8 +420,9 @@ alert('Please try again. Your browser blocked the download.');
             <Trophy className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="font-teko text-2xl md:text-3xl leading-none text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 font-bold uppercase tracking-wider">
+            <h1 className="font-teko text-2xl md:text-3xl leading-none text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 font-bold uppercase tracking-wider flex items-center gap-2">
               FF Max Point Table
+              <span className="text-[10px] md:text-xs bg-cyan-900/50 text-cyan-300 border border-cyan-500/30 px-2 py-0.5 rounded font-rajdhani tracking-widest align-middle mt-1">v1.3.0</span>
             </h1>
             <p className="text-[10px] md:text-xs text-cyan-200/60 font-medium uppercase tracking-widest mt-0.5">Esports Calculator & Generator</p>
           </div>

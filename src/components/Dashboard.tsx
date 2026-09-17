@@ -51,7 +51,10 @@ export default function Dashboard({ user }: DashboardProps) {
             <Trophy className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="font-oswald font-black text-xl md:text-2xl uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-white to-cyan-400">Tournament Hub</h1>
+            <h1 className="font-oswald font-black text-xl md:text-2xl uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-white to-cyan-400 flex items-center gap-2">
+              Tournament Hub
+              <span className="text-[10px] bg-cyan-900/50 text-cyan-300 border border-cyan-500/30 px-2 py-0.5 rounded font-rajdhani tracking-widest align-middle mt-0.5">v1.3.0</span>
+            </h1>
             <p className="text-[10px] md:text-xs text-cyan-400/70 font-semibold tracking-widest uppercase">{user.displayName || 'Organizer'}</p>
           </div>
         </div>

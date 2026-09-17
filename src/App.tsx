@@ -44,9 +44,12 @@ const LoginScreen = () => {
         <div className="bg-cyan-500 w-16 h-16 rounded-2xl shadow-[0_0_20px_rgba(0,204,255,0.4)] flex items-center justify-center mx-auto mb-6">
           <Trophy className="w-8 h-8 text-white" />
         </div>
-        <h1 className="font-oswald font-black text-3xl uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-white to-cyan-400 mb-2">
-          Tournament Hub
-        </h1>
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <h1 className="font-oswald font-black text-3xl uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-white to-cyan-400">
+            Tournament Hub
+          </h1>
+          <span className="text-[10px] bg-cyan-900/50 text-cyan-300 border border-cyan-500/30 px-2 py-0.5 rounded font-rajdhani tracking-widest mt-1">v1.3.0</span>
+        </div>
         <p className="text-cyan-400/60 mb-6 font-medium">Sign in to manage your esports tournaments and generate HD points tables.</p>
         
         {error && (
