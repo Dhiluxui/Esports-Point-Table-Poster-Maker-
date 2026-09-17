@@ -126,13 +126,55 @@ export default function PointsTableEditor() {
     const fetchTournamentData = async () => {
       try {
         const tDoc = await getDoc(doc(db, 'tournaments', id));
+        let loadedFromCloud = false;
+        
         if (tDoc.exists()) {
           const data = tDoc.data();
-          if (data.teams && data.teams.length > 0) {
-            setTeams(data.teams);
-          }
-          if (data.branding) {
-            setBranding(data.branding);
+          const cloudUpdatedAt = data.updatedAt?.toMillis() || 0;
+          
+          // Check local storage for a newer backup
+          let shouldUseLocal = false;
+          try {
+            const backup = localStorage.getItem(`tournament_backup_${id}`);
+            if (backup) {
+              const parsed = JSON.parse(backup);
+              // If it's from the last 24 hours
+              const isRecent = (Date.now() - parsed.timestamp) < 24 * 60 * 60 * 1000;
+              // If cloud data has no teams (never saved successfully), ALWAYS use local storage
+              const cloudHasNoTeams = !data.teams || data.teams.length === 0;
+              
+              // To handle clock drift between client and server, we just check if it's recent and cloud has no teams,
+              // OR if we stored the local time of the last cloud save and our backup is newer.
+              if (isRecent) {
+                if (cloudHasNoTeams || parsed.timestamp > (parsed.lastCloudSaveLocalTime || 0) + 1000) {
+                   shouldUseLocal = true;
+                   setTeams(parsed.teams);
+                   setBranding(parsed.branding);
+                   loadedFromCloud = true;
+                }
+              }
+            }
+          } catch(e) {}
+
+          if (!shouldUseLocal) {
+            if (data.teams && data.teams.length > 0) {
+              setTeams(data.teams);
+            } else if (data.slots) {
+              // Generate empty teams based on slots
+              const emptyTeams = Array.from({ length: data.slots }, (_, i) => ({
+                id: String(i + 1),
+                name: `TEAM ${i + 1}`,
+                matchesPlayed: 1,
+                booyahs: 0,
+                placementPoints: 0,
+                killPoints: 0,
+                totalPoints: 0
+              }));
+              setTeams(emptyTeams);
+            }
+            if (data.branding) {
+              setBranding(data.branding);
+            }
           }
           
           if (currentUser && data.ownerId === currentUser.uid) {
@@ -170,6 +212,7 @@ export default function PointsTableEditor() {
         branding,
         updatedAt: serverTimestamp()
       });
+      lastCloudSaveLocalTime.current = Date.now();
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus(''), 2000);
     } catch (error) {
@@ -188,11 +231,57 @@ export default function PointsTableEditor() {
     return () => clearTimeout(timer);
   }, [teams, branding, isOwner, saveToCloud]);
 
+  // Prevent leaving if saving & handle visibility change (backgrounding)
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (saveStatus === 'saving' || saveStatus === '') {
+         // Attempt sync on unload if there might be unsaved changes
+         saveToCloud();
+      }
+      if (saveStatus === 'saving') {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+         // App went to background (e.g. user clicked a message notification)
+         // Force an immediate cloud save if there are unsaved changes
+         if (initialLoadDone.current && isOwner) {
+            saveToCloud();
+            // Also force local storage sync just in case
+            try {
+              localStorage.setItem(`tournament_backup_${id}`, JSON.stringify({ 
+                teams, 
+                branding, 
+                timestamp: Date.now(),
+                lastCloudSaveLocalTime: lastCloudSaveLocalTime.current
+              }));
+            } catch (e) {}
+         }
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [saveStatus, saveToCloud, teams, branding, id, isOwner]);
+
   // LocalStorage Backup Fallback (Immediate)
+  const lastCloudSaveLocalTime = useRef(Date.now());
   useEffect(() => {
     if (!initialLoadDone.current) return;
     try {
-      localStorage.setItem(`tournament_backup_${id}`, JSON.stringify({ teams, branding, timestamp: Date.now() }));
+      localStorage.setItem(`tournament_backup_${id}`, JSON.stringify({ 
+        teams, 
+        branding, 
+        timestamp: Date.now(),
+        lastCloudSaveLocalTime: lastCloudSaveLocalTime.current
+      }));
     } catch (e) {}
   }, [teams, branding, id]);
 
@@ -413,7 +502,7 @@ alert('Please try again. Your browser blocked the download.');
     <div className="min-h-screen bg-[#030712] text-white flex flex-col font-rajdhani selection:bg-cyan-500/30">
       <header className={`border-b border-white/5 bg-[#0b132b]/80 backdrop-blur-md px-4 md:px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-50 `}>
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/')} className="w-10 h-10 rounded bg-[#0a142f] flex items-center justify-center text-cyan-500 hover:text-white hover:bg-cyan-600 transition-colors shrink-0">
+          <button onClick={() => { if(isOwner) { saveToCloud(); } navigate('/'); }} className="w-10 h-10 rounded bg-[#0a142f] flex items-center justify-center text-cyan-500 hover:text-white hover:bg-cyan-600 transition-colors shrink-0">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="w-10 h-10 rounded bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.4)] shrink-0">
